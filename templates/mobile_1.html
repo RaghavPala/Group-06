@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="manifest" href="/pwa/manifest.webmanifest">
+  <meta name="theme-color" content="#0b0f19">
+
+  <title>Tasker – Mobile</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Nabla&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+  
+
+  <script>
+  (function () {
+    const ua = navigator.userAgent || "";
+    const platform = navigator.platform || "";
+    const isIOS =
+      /iPad|iPhone|iPod/.test(ua) ||
+      (platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  
+    if (isIOS) document.documentElement.classList.add("ios");
+  })();
+  </script>
+
+  <style>
+    :root {
+      --bg: #0e1116;
+      --panel: #151a21;
+      --panel-soft: #1b212b;
+      --text: #e6e9ef;
+      --muted: #9aa3b2;
+      --accent: #4f8cff;
+      --accent-pressed: #356de0;
+      --danger: #ff5c5c;
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: var(--bg);
+      font-family: 'Roboto', system-ui, sans-serif;
+      color: var(--text);
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 20px 16px 14px;
+      background: var(--panel);
+      border-bottom: 1px solid #222;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 1.4rem;
+      font-weight: 700;
+    }
+
+    header a {
+      display: inline-block;
+      margin-top: 6px;
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.95rem;
+    }
+
+    main {
+      flex: 1;
+      max-width: 480px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 16px 10px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .section {
+      background: var(--panel);
+      border-radius: var(--radius);
+      padding: 16px 14px;
+    }
+
+    h2, h3 {
+      margin: 0 0 12px;
+      font-weight: 500;
+    }
+
+    h2 a {
+      margin-left: 10px;
+      font-size: 0.9rem;
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    /* ---------- TASK LIST ---------- */
+
+    ul#taskList {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    ul#taskList li {
+      background: var(--panel-soft);
+      border-radius: var(--radius);
+      padding: 14px;
+      transition: background 0.15s ease, transform 0.1s ease;
+    }
+
+    ul#taskList li.tap-active {
+      background: #222836;
+      transform: scale(0.99);
+    }
+
+    summary {
+      cursor: pointer;
+      list-style: none;
+      outline: none;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      font-weight: 600;
+    }
+
+    summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .task-details {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.4;
+      animation: expand 0.15s ease;
+    }
+
+    @keyframes expand {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .delete-btn {
+      margin-top: 10px;
+      background: transparent;
+      border: 1px solid var(--danger);
+      color: var(--danger);
+      padding: 6px 14px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
+    .delete-btn:active {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    /* ---------- FORM ---------- */
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 110px;
+      resize: vertical;
+      background: var(--panel-soft);
+      border: none;
+      border-radius: var(--radius);
+      padding: 12px;
+      color: var(--text);
+      font-size: 1rem;
+      outline: none;
+    }
+
+    textarea::placeholder {
+      color: var(--muted);
+    }
+
+    button[type="submit"] {
+      width: 100%;
+      padding: 12px;
+      border-radius: var(--radius);
+      border: none;
+      font-size: 1rem;
+      font-weight: 600;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.1s ease, transform 0.05s ease;
+    }
+
+    button[type="submit"].pressed {
+      background: var(--accent-pressed);
+      transform: translateY(1px) scale(0.98);
+    }
+
+    .section-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+      margin: 0 0 12px;
+    }
+    
+    .section-head h2{
+      margin: 0;
+    }
+    
+    /* smaller than desktop so it fits clean on mobile */
+    .clock-strip{
+      display:inline-flex;
+      align-items:center;
+      padding: 6px 10px;
+      border-radius: 12px;
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(255,255,255,.08);
+      letter-spacing: .05em;
+      user-select:none;
+      white-space:nowrap;
+    }
+    
+    .clock-date{
+      color: var(--accent);
+      font-weight: 800;
+      font-size: 0.78rem;
+    }
+    
+    .clock-sep{
+      opacity:.35;
+      padding: 0 8px;
+      font-weight: 800;
+    }
+    
+    .clock-time{
+      color: var(--text);
+      opacity:.65;
+      font-weight: 700;
+      font-size: 0.74rem;
+      font-variant-numeric: tabular-nums;
+    }
+    
+    .clock-time.snap{
+      animation: snap 180ms ease-out;
+    }
+    
+    @keyframes snap{
+      0%   { opacity:0; transform: translateY(-4px) scale(1.08); }
+      100% { opacity:.65; transform: translateY(0) scale(1); }
+    }
+
+    .nabla-title{
+      font-family: "Nabla", system-ui, sans-serif;
+      font-weight: 400;
+      letter-spacing: 0.02em;
+      line-height: 1;
+    }
+
+    html.ios .nabla-title{
+      font-family: "Outfit", system-ui, sans-serif;
+      font-weight: 800; 
+    }
+
+    
+    .nabla-welcome{
+      font-size: 2.1rem;  
+    }
+    
+    .nabla-tasks{
+      font-size: 1.55rem;
+    }
+
+
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1 class="nabla-title nabla-welcome">Welcome, {{ username }}</h1>
+    <a href="{{ url_for('logout') }}">Logout</a>
+  </header>
+
+  <main>
+    <section class="section">
+      <div class="section-head">
+        <h2 class="nabla-title nabla-tasks">
+          Your Tasks 
+        </h2>
+
+      
+        <div class="clock-strip" id="clockStrip">
+          <span class="clock-date" id="clockDate"></span>
+          <span class="clock-sep">·</span>
+          <span class="clock-time" id="clockTime"></span>
+        </div>
+      </div>
+
+      <ul id="taskList"></ul>
+    </section>
+
+    <section class="section">
+      <h3>Add Task</h3>
+      <form id="taskForm">
+        <textarea id="task_description" placeholder="Describe task"></textarea>
+        <button type="submit" id="addTaskBtn">Add Task</button>
+      </form>
+    </section>
+  </main>
+
+  <script>
+
+    let addTaskCooldown = false;
+    const ADD_TASK_COOLDOWN_MS = 3000; 
+
+    
+    function buildUserTzMetadata() {
+      const now = new Date();
+      return {
+        "todaysDate (yyyy/mm/dd): ": now.toLocaleDateString('en-CA'),
+        "current time: ": now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
+        "current day: ": now.toLocaleDateString('en-US', { weekday: 'long' })
+      };
+    }
+
+    async function loadTasks() {
+      const res = await fetch('/tasks');
+      const tasks = await res.json();
+      const list = document.getElementById('taskList');
+      list.innerHTML = '';
+
+      tasks.forEach(task => {
+        const [id,, name, time, desc, due,, color] = task;
+        const li = document.createElement('li');
+
+        li.innerHTML = `
+          <details>
+            <summary>
+              <span style="color:${color}">${name}</span>
+              <span style="font-size:0.85rem;color:var(--muted)">
+                ${due ? due.replace(/ 00:00:00.*$/, '') : ''} ${time || ''}
+              </span>
+            </summary>
+            <div class="task-details">
+              ${desc}
+              <br>
+              <button class="delete-btn" onclick="deleteTask(${id})">Delete</button>
+            </div>
+          </details>
+        `;
+
+        addTapFeedback(li);
+        list.appendChild(li);
+      });
+    }
+
+    function addTapFeedback(el) {
+      el.addEventListener('touchstart', () => el.classList.add('tap-active'));
+      el.addEventListener('touchend', () => el.classList.remove('tap-active'));
+      el.addEventListener('touchcancel', () => el.classList.remove('tap-active'));
+    }
+
+    async function deleteTask(id) {
+      const res = await fetch('/tasks/' + id, { method: 'DELETE' });
+      if (res.ok) loadTasks();
+    }
+
+
+    document.getElementById('taskForm').addEventListener('submit', async e => {
+      e.preventDefault();
+
+      if (addTaskCooldown) return;
+      addTaskCooldown = true;
+      setTimeout(() => { addTaskCooldown = false; }, ADD_TASK_COOLDOWN_MS);
+      const desc = task_description.value;
+      if (desc.length < 10 || desc.length > 200) return alert('10–200 chars');
+
+      const res = await fetch('/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          task_description: desc,
+          user_tz_metadata: buildUserTzMetadata()
+        })
+      });
+
+      if (res.ok) {
+        task_description.value = '';
+        loadTasks();
+      }
+    });
+
+    // Add Task button press state (mobile-safe)
+    const btn = document.getElementById('addTaskBtn');
+    ['touchstart','mousedown'].forEach(e =>
+      btn.addEventListener(e, () => btn.classList.add('pressed'))
+    );
+    ['touchend','touchcancel','mouseup','mouseleave'].forEach(e =>
+      btn.addEventListener(e, () => btn.classList.remove('pressed'))
+    );
+
+    function renderClock(animate=false){
+      const now = new Date();
+      const date = now.toLocaleDateString(undefined, { weekday:"short", month:"short", day:"numeric" }).toUpperCase();
+      const time = now.toLocaleTimeString(undefined, { hour:"2-digit", minute:"2-digit" });
+    
+      const elDate = document.getElementById("clockDate");
+      const elTime = document.getElementById("clockTime");
+    
+      if (!elDate || !elTime) return;
+    
+      elDate.textContent = date;
+      elTime.textContent = time;
+    
+      if (animate){
+        elTime.classList.remove("snap");
+        void elTime.offsetWidth;
+        elTime.classList.add("snap");
+      }
+    }
+    
+  renderClock(false);
+
+  function scheduleNextClockTick(){
+    const now = Date.now();
+    const msToNextMinute = 60000 - (now % 60000);
+
+    // tiny buffer so we update just AFTER the minute flips
+    const bufferMs = 80;
+
+    setTimeout(() => {
+      renderClock(true);
+      scheduleNextClockTick();   // resync every time (no drift ideally)
+    }, msToNextMinute + bufferMs);
+  }
+
+  scheduleNextClockTick();
+
+  // when tab becomes visible again, refresh immediately
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) renderClock(false);
+  });
+
+
+    
+    loadTasks();
+  </script>
+</body>
+</html>

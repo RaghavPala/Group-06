@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="manifest" href="/pwa/manifest.webmanifest">
+  <title>Request Access - Tasker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background-color: #030303ef;
+      margin: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    .login-container {
+      background-color: #00000000;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.329);
+      text-align: center;
+      width: 90%;
+      max-width: 400px;
+    }
+
+    input[type="text"],
+    input[type="password"],
+    input[type="email"] {
+      width: 70%;
+      padding: 10px;
+      margin: 10px 0;
+      border: 1px solid #cccccc;
+      border-radius: 4px;
+      background-color: #2d2d2d;
+      color: white;
+    }
+
+    input::placeholder {
+      color: #b0b0b0;
+    }
+
+    button {
+      padding: 10px 20px;
+      background-color: #007BFF;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    .logout-link {
+      display: inline-block;
+      margin-top: 18px;
+      color: #4f8cff;
+      font-size: 1rem;
+      font-weight: 500;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    .logout-link:hover {
+      color: #6ed0fa;
+    }
+
+    /* Info tooltip */
+    .info-wrapper {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      position: relative;
+    }
+    
+    .info-icon {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #555;
+      color: #fff;
+      font-size: 11px;
+      font-weight: bold;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: default;
+    }
+    
+    .info-tooltip {
+      position: absolute;
+      bottom: 130%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1e1e1e;
+      color: #ddd;
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      line-height: 1.35;
+      width: 240px;
+      text-align: left;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s ease;
+      z-index: 10;
+    }
+    
+    .info-wrapper:hover .info-tooltip {
+      opacity: 1;
+    }
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1e1e1e;
+      color: #eaeaea;
+      padding: 12px 18px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.45);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+      z-index: 1000;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(-6px);
+    }
+
+    .error {
+      color: #ff5c5c;
+      margin-bottom: 10px;
+      font-size: 0.95rem;
+    }
+
+    
+
+    
+
+  </style>
+</head>
+
+<body>
+  <div class="login-container">
+    <div id="error" class="error" style="display:none;"></div>
+
+
+    <form method="POST" action="{{ url_for('signup') }}">
+      <input
+        type="text"
+        name="username"
+        placeholder="Enter Username"
+        required
+      >
+
+      <input
+        type="password"
+        name="password"
+        placeholder="Enter Password"
+        required
+      >
+
+      <input
+        type="email"
+        name="email"
+        placeholder="Email"
+        required
+      >
+
+      <br>
+      <div class="info-wrapper">
+        <button type="submit">Request Access</button>
+
+        <div class="info-icon">i</div>
+        <div class="info-tooltip">
+          Email is used only for account status communication and feedback requests.<br><br>
+          Credentials are private and never visible to the admin.<br> Save them to your browser for convenient and safe access.
+
+        </div>
+      </div>
+    </form>
+
+    <a href="{{ url_for('login') }}" class="logout-link">Back to Login</a>
+
+  </div>
+    <div id="toast" class="toast">
+    Request submitted. You’ll be notified by email when access is granted or denied.
+  </div>
+
+  <script>
+      const form = document.querySelector("form");
+      const toast = document.getElementById("toast");
+      const errorBox = document.getElementById("error");
+    
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+    
+        // Clear old error each submit
+        errorBox.textContent = "";
+        errorBox.style.display = "none";
+    
+        const res = await fetch("/signup", {
+          method: "POST",
+          body: new FormData(form)
+        });
+    
+        // We expect JSON from the backend for BOTH success + error
+        let data;
+        try {
+          data = await res.json();
+        } catch (err) {
+          data = { ok: false, error: "Unexpected server response." };
+        }
+    
+        if (res.ok && data.ok) {
+          // Success -> show toast, hide any error, optionally reset form
+          toast.classList.add("show");
+          setTimeout(() => toast.classList.remove("show"), 15000);
+          form.reset();
+        } else {
+          // Failure -> show error message, do NOT toast
+          errorBox.textContent = data.error || "Request failed. Try again.";
+          errorBox.style.display = "block";
+        }
+      });
+</script>
+
+  
+</body>
+</html>
