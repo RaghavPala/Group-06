@@ -27,7 +27,7 @@ users_db = {
 def valid_netid(netid):
     return re.fullmatch(r"([a-z]{5,9}|[a-z]{3}[0-9]{6})", netid) is not None
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/login', methods=['GET', 'POST'])
 def login():
     # check if already logged in
     if "netid" in session:
