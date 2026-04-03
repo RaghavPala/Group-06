@@ -2,10 +2,14 @@ import re, secrets
 from flask import Flask, request, redirect, url_for, render_template_string, session
 from flask_bcrypt import Bcrypt
 from datetime import timedelta
+from views import attendance_bp
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(32) # Change this before the final version, will log everyone out each time the server restarts
 app.permanent_session_lifetime = timedelta(days=7)
+
+
+app.register_blueprint(attendance_bp)
 
 bcrypt = Bcrypt(app)
 
