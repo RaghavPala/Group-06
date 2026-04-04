@@ -1,3 +1,5 @@
+# Author: Anirudh Purohit
+
 import hmac
 import hashlib
 import math
