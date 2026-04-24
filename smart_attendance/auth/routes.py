@@ -2,33 +2,13 @@ import re
 
 from flask import Blueprint, redirect, render_template_string, request, session, url_for
 
+from smart_attendance.db import repository
 from smart_attendance.extensions import bcrypt
 
 auth_bp = Blueprint("auth", __name__)
 
-USER_SEEDS = {
-    "dal123456": {
-        "password": "password1234*",
-        "is_instructor": False,
-    },
-    "proftest": {
-        "password": "profpass1*",
-        "is_instructor": True,
-    },
-}
 
-users_db = {}
-
-
-def initialize_users():
-    users_db.clear()
-    for netid, user in USER_SEEDS.items():
-        users_db[netid] = {
-            "password": bcrypt.generate_password_hash(user["password"]).decode("utf-8"),
-            "is_instructor": user["is_instructor"],
-        }
-
-
+# NetIDs are lowercase: either 5–9 letters, or the UTD-style 3 letters + 6 digits.
 def valid_netid(netid):
     return re.fullmatch(r"([a-z]{5,9}|[a-z]{3}[0-9]{6})", netid) is not None
 
@@ -52,13 +32,14 @@ def login():
         if not valid_netid(netid):
             return "Invalid NetID format. Please ensure your NetID is all lowercase."
 
-        if netid not in users_db:
+        # Auth is backed by the users table — bcrypt hash lives in users.password_hash.
+        user = repository.get_user_by_netid(netid)
+        if not user:
             return "User not found. Please try again."
 
-        user = users_db[netid]
-        if bcrypt.check_password_hash(user["password"], password):
+        if bcrypt.check_password_hash(user["password_hash"], password):
             session.permanent = True
-            session["netid"] = netid
+            session["netid"] = user["netid"]
             session["is_instructor"] = user["is_instructor"]
 
             if user["is_instructor"]:

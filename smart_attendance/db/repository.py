@@ -2,6 +2,21 @@ from smart_attendance.db.postgres import get_connection
 from smart_attendance.services.tokens import get_current_epoch
 
 
+# Used by the login flow — returns the full user row (incl. password_hash)
+# so auth can verify the bcrypt hash stored in the DB.
+def get_user_by_netid(netid):
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT netid, name, email, password_hash, is_instructor
+            FROM users
+            WHERE netid = %s
+            """,
+            (netid,),
+        )
+        return cur.fetchone()
+
+
 def get_student(netid):
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute(
@@ -146,3 +161,65 @@ def get_student_courses(netid):
             (netid,),
         )
         return [row["course_id"] for row in cur.fetchall()]
+
+
+# Inserts a new course owned by instructor_netid with a pre-generated
+# enrollment_code. Returns True on insert, False if course_id already exists.
+# Enrollment_code collisions bubble up as IntegrityError (caller retries).
+def create_course(course_id, course_name, instructor_netid, enrollment_code):
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO courses (course_id, course_name, instructor_netid, enrollment_code)
+            VALUES (%s, %s, %s, %s)
+            ON CONFLICT (course_id) DO NOTHING
+            RETURNING course_id
+            """,
+            (course_id, course_name, instructor_netid, enrollment_code),
+        )
+        return cur.fetchone() is not None
+
+
+# Opens a new class_sessions row for today, active immediately. window_minutes
+# controls how long scans are accepted; duration_minutes is the nominal class
+# length (end_time, informational). Returns the new session_id.
+def start_session(course_id, window_minutes, duration_minutes):
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO class_sessions
+                (course_id, class_date, start_time, end_time,
+                 attendance_window_end, is_active)
+            VALUES (
+                %s,
+                CURRENT_DATE,
+                CURRENT_TIMESTAMP,
+                CURRENT_TIMESTAMP + (%s * INTERVAL '1 minute'),
+                CURRENT_TIMESTAMP + (%s * INTERVAL '1 minute'),
+                TRUE
+            )
+            RETURNING session_id
+            """,
+            (course_id, duration_minutes, window_minutes),
+        )
+        return cur.fetchone()["session_id"]
+
+
+# Feeds the CSV export. One row per (student, session they attended).
+# Absent students are implicit (no row) — the schema only stores presence.
+def get_course_attendance(course_id):
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT u.netid, u.name, u.email,
+                   cs.class_date, cs.session_id,
+                   ar.scanned_at
+            FROM attendance_records ar
+            JOIN class_sessions cs ON cs.session_id = ar.session_id
+            JOIN users          u  ON u.netid      = ar.student_netid
+            WHERE cs.course_id = %s
+            ORDER BY cs.class_date, u.netid
+            """,
+            (course_id,),
+        )
+        return cur.fetchall()

@@ -2,84 +2,189 @@
 
 Group project for CS 3354 - Smart Attendance Tracker.
 
-## Local Setup
+> **Windows users — read first.** The simplest, most compatible dev setup on Windows is to install **WSL 2 with Ubuntu** and do everything below inside the Ubuntu shell. This gives you a real Linux environment that matches what the rest of the team uses, avoids path / line-ending / toolchain differences, and lets Docker Desktop integrate natively.
+>
+> Open PowerShell as admin and run:
+> ```powershell
+> wsl --install -d Ubuntu
+> ```
+> Reboot, set up your Ubuntu username/password, then open the "Ubuntu" app and follow the rest of this README from there.
 
-### 1. Create and activate a virtual environment
+## Quick Start (Docker — recommended)
 
-```powershell
-python -m venv .venv
-.venv\Scripts\Activate.ps1
+This is the fastest way to get a reproducible Postgres instance with the schema and seed data already loaded. Works identically on Linux, macOS, and WSL 2 Ubuntu.
+
+### 0. Install Docker
+
+Verify you already have it:
+
+```bash
+docker --version
+docker compose version
 ```
+
+If either command fails, install Docker:
+
+**macOS** (requires macOS within the last 3 major releases, ≥4 GB RAM)
+- Official: download the Apple Silicon or Intel `.dmg` from <https://www.docker.com/products/docker-desktop/>, drag Docker to Applications, launch it once, accept the terms.
+- Unofficial shortcut: `brew install --cask docker-desktop` also works (community cask; installs the same app).
+- Docker Desktop is free for personal, education, and small-business use (<250 employees and <$10M revenue); otherwise a paid subscription is required.
+
+**Windows 10/11** (64-bit, 8 GB RAM, hardware virtualization enabled in BIOS/UEFI; Win 10 22H2 build 19045+ or Win 11 23H2 build 22631+)
+- Install Docker Desktop from <https://www.docker.com/products/docker-desktop/>.
+- Default backend is WSL 2 (installer will enable it; reboot may be required). Hyper-V backend also supported if preferred.
+- Launch Docker Desktop once before using `docker` from PowerShell / terminal.
+- Same licensing terms as macOS above.
+
+**Linux**
+
+Ubuntu / Debian:
+```bash
+sudo apt-get update
+sudo apt-get install -y docker.io docker-compose-plugin
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER   # log out + back in so `docker` works without sudo
+```
+
+Fedora (use Docker's official repo — the in-tree `docker` package was removed in favor of Podman):
+```bash
+sudo dnf -y install dnf-plugins-core
+sudo dnf config-manager addrepo --from-repofile=https://download.docker.com/linux/fedora/docker-ce.repo
+sudo dnf -y install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER   # log out + back in
+```
+
+RHEL / CentOS Stream / Rocky / Alma:
+```bash
+sudo dnf -y install dnf-plugins-core
+sudo dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
+sudo dnf -y install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER
+```
+
+Arch:
+```bash
+sudo pacman -S docker docker-compose
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER
+```
+
+After install, confirm:
+
+```bash
+docker run --rm hello-world
+```
+
+### 1. Create and activate a Python virtual environment
+
+A venv keeps this project's dependencies isolated from your system Python. Create it once inside the repo root:
+
+```bash
+python -m venv .venv          # or python3 on some systems
+```
+
+Activate it every time you open a new terminal:
+
+| Shell                         | Activate                           | Deactivate    |
+|-------------------------------|------------------------------------|---------------|
+| macOS / Linux / WSL (bash, zsh) | `source .venv/bin/activate`       | `deactivate`  |
+| Windows PowerShell            | `.venv\Scripts\Activate.ps1`       | `deactivate`  |
+| Windows cmd.exe               | `.venv\Scripts\activate.bat`       | `deactivate`  |
+
+Your prompt should now show `(.venv)` at the front. If PowerShell blocks activation with an execution-policy error, run once in an admin PowerShell: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
+
+If Python isn't installed: macOS `brew install python`, Ubuntu/WSL `sudo apt install python3 python3-venv`, Fedora `sudo dnf install python3`.
 
 ### 2. Install Python dependencies
 
-```powershell
+```bash
 pip install -r requirements.txt
 ```
 
-### 3. Install PostgreSQL
+### 3. Start Postgres
 
-Install PostgreSQL for Windows from the official download page:
+From the project root:
 
-https://www.postgresql.org/download/windows/
-
-During installation:
-
-- install the PostgreSQL server
-- keep the default port `5432`
-- remember the password you set for the `postgres` user
-- `Stack Builder` is optional and can be skipped
-
-### 4. Create the project database
-
-Open `pgAdmin 4` or `SQL Shell (psql)` and create a database named `smart_attendance`.
-
-```sql
-CREATE DATABASE smart_attendance;
+```bash
+docker compose up -d
 ```
 
-### 5. Create tables and load starter data
+This launches a Postgres container on `localhost:5432` and auto-runs
+`db-schema-seeding/schema.sql` followed by `db-schema-seeding/seed.sql` the
+first time it boots. The database is named `smart_attendance`, user
+`postgres`, password `postgres`.
 
-From the project root, run:
+To reset to a clean, freshly-seeded DB at any time:
 
-```powershell
-psql -U postgres -d smart_attendance -f db\schema.sql
-psql -U postgres -d smart_attendance -f db\seed.sql
+```bash
+docker compose down -v && docker compose up -d
 ```
 
-If your PostgreSQL username is not `postgres`, replace it with your own username.
+### 4. Point the app at the DB
 
-### 6. Set the database connection string
-
-In PowerShell, set `DATABASE_URL` before running the app:
-
-```powershell
-$env:DATABASE_URL="postgresql://postgres:YOUR_PASSWORD@localhost:5432/smart_attendance"
+```bash
+export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/smart_attendance
 ```
 
-Replace `YOUR_PASSWORD` with the password you chose during PostgreSQL installation.
-
-### 7. Run the Flask app
+On Windows PowerShell:
 
 ```powershell
+$env:DATABASE_URL="postgresql://postgres:postgres@localhost:5432/smart_attendance"
+```
+
+### 5. Run the app
+
+```bash
 python app.py
 ```
 
-Then open:
+Then open <http://127.0.0.1:5000/>.
 
-```text
-http://127.0.0.1:5000/
-```
+Seeded accounts (from `db-schema-seeding/seed.sql`):
 
-### 8. Run the test suite
+| NetID       | Password         | Role       |
+|-------------|------------------|------------|
+| `proftest`  | `profpass1*`     | Instructor |
+| `dal123456` | `password1234*`  | Student    |
+| `abc123456` | `password1234*`  | Student    |
 
-```powershell
+### 6. Run the test suite
+
+```bash
 pytest -q
 ```
 
+Tests hit the same seeded DB as the app (no mocks / stubs).
+
+---
+
+## Alternate Setup (native Postgres, no Docker)
+
+If you'd rather install Postgres directly:
+
+1. Install PostgreSQL from <https://www.postgresql.org/download/>.
+2. Create the database and load schema + seed:
+   ```bash
+   createdb smart_attendance
+   psql -d smart_attendance -f db-schema-seeding/schema.sql
+   psql -d smart_attendance -f db-schema-seeding/seed.sql
+   ```
+3. Set `DATABASE_URL` to match your install (replace user/password/host as needed):
+   ```bash
+   export DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/smart_attendance
+   ```
+4. `python app.py`.
+
+---
+
 ## Notes
 
-- `db/schema.sql` creates the database tables.
-- `db/seed.sql` inserts starter data for demo users, courses, enrollments, and class sessions.
-- Attendance and enrollment DB functions use PostgreSQL when `DATABASE_URL` is set.
-- Login still uses the temporary in-memory user store for now.
+- The app requires `DATABASE_URL` at startup and will refuse to boot without it.
+  Auth and attendance both read from Postgres — there is no in-memory fallback.
+- `db-schema-seeding/schema.sql` defines the tables.
+- `db-schema-seeding/seed.sql` inserts demo users, courses, enrollments, and a
+  currently-active session for `CS3354.001` (the session's attendance window is
+  5 minutes — re-seed with `docker compose down -v && docker compose up -d` if
+  it expires while you're testing).

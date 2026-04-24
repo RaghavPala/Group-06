@@ -1,16 +1,9 @@
-from flask import Blueprint, jsonify, request, session
+import csv
+import io
 
-from smart_attendance.db.stubs import (
-    db_enroll_student,
-    db_get_course,
-    db_get_course_by_enrollment_code,
-    db_get_student,
-    db_get_student_courses,
-    db_is_already_marked,
-    db_is_enrolled,
-    db_is_session_active,
-    db_mark_attendance,
-)
+from flask import Blueprint, Response, jsonify, request, session
+
+from smart_attendance.db import repository
 from smart_attendance.services.tokens import (
     generate_token,
     get_current_epoch,
@@ -22,6 +15,75 @@ from smart_attendance.utils.codes import generate_enrollment_code
 attendance_bp = Blueprint("attendance", __name__)
 
 
+# Instructor creates a new course. Enrollment code is server-generated so the
+# instructor can't pick a predictable one. Returns the code so the UI can show
+# it / render a QR for students to join with.
+@attendance_bp.route("/course", methods=["POST"])
+def create_course():
+    if "netid" not in session:
+        return jsonify({"error": "not authenticated"}), 401
+    if not session.get("is_instructor"):
+        return jsonify({"error": "access denied"}), 403
+
+    body = request.get_json() or {}
+    course_id = body.get("course_id")
+    course_name = body.get("course_name")
+
+    if not course_id or not course_name:
+        return jsonify({"error": "missing course_id or course_name"}), 400
+
+    enrollment_code = generate_enrollment_code()
+    created = repository.create_course(
+        course_id, course_name, session["netid"], enrollment_code
+    )
+    if not created:
+        return jsonify({"error": "course_id already exists"}), 409
+
+    return jsonify(
+        {
+            "course_id": course_id,
+            "course_name": course_name,
+            "enrollment_code": enrollment_code,
+        }
+    ), 201
+
+
+# Instructor opens a class session — this is what flips `is_active` TRUE so
+# that /attendance/scan starts accepting tokens. Only the course's owning
+# instructor can start a session for it.
+@attendance_bp.route("/session/start", methods=["POST"])
+def start_session():
+    if "netid" not in session:
+        return jsonify({"error": "not authenticated"}), 401
+    if not session.get("is_instructor"):
+        return jsonify({"error": "access denied"}), 403
+
+    body = request.get_json() or {}
+    course_id = body.get("course_id")
+    # Reasonable defaults: 15-minute scan window inside a 75-minute class.
+    window_minutes = int(body.get("window_minutes", 15))
+    duration_minutes = int(body.get("duration_minutes", 75))
+
+    if not course_id:
+        return jsonify({"error": "missing course_id"}), 400
+
+    course = repository.get_course(course_id)
+    if not course:
+        return jsonify({"error": "course not found"}), 404
+    if course["instructor"] != session["netid"]:
+        return jsonify({"error": "not your course"}), 403
+
+    session_id = repository.start_session(course_id, window_minutes, duration_minutes)
+    return jsonify(
+        {
+            "session_id": session_id,
+            "course_id": course_id,
+            "window_minutes": window_minutes,
+            "duration_minutes": duration_minutes,
+        }
+    ), 201
+
+
 @attendance_bp.route("/enroll/qr", methods=["GET"])
 def get_enrollment_qr():
     if "netid" not in session:
@@ -31,7 +93,7 @@ def get_enrollment_qr():
 
     course_id = request.args.get("course_id")
 
-    course = db_get_course(course_id)
+    course = repository.get_course(course_id)
     if not course:
         return jsonify({"error": "course not found"}), 404
 
@@ -53,16 +115,16 @@ def join_course():
     if not enrollment_code:
         return jsonify({"error": "missing enrollment_code"}), 400
 
-    course = db_get_course_by_enrollment_code(enrollment_code)
+    course = repository.get_course_by_enrollment_code(enrollment_code)
     if not course:
         return jsonify({"error": "invalid enrollment code"}), 404
 
     course_id = course["course_id"]
 
-    if db_is_enrolled(netid, course_id):
+    if repository.is_enrolled(netid, course_id):
         return jsonify({"error": "already enrolled"}), 409
 
-    success = db_enroll_student(netid, course_id)
+    success = repository.enroll_student(netid, course_id)
     if not success:
         return jsonify({"error": "enrollment failed"}), 500
 
@@ -77,11 +139,11 @@ def get_attendance_qr():
         return jsonify({"error": "access denied"}), 403
 
     netid = session["netid"]
-    student = db_get_student(netid)
+    student = repository.get_student(netid)
     if not student:
         return jsonify({"error": "student not found"}), 404
 
-    courses = db_get_student_courses(netid)
+    courses = repository.get_student_courses(netid)
     epoch = get_current_epoch()
     seconds_remaining = get_window_seconds_remaining()
 
@@ -119,13 +181,13 @@ def scan_attendance():
     netid = result["netid"]
     course_id = result["course_id"]
 
-    if not db_is_session_active(course_id):
+    if not repository.is_session_active(course_id):
         return jsonify({"error": "no active session"}), 403
 
-    if db_is_already_marked(netid, course_id):
+    if repository.is_already_marked(netid, course_id):
         return jsonify({"error": "already marked present"}), 409
 
-    success = db_mark_attendance(netid, course_id)
+    success = repository.mark_attendance(netid, course_id)
     if not success:
         return jsonify({"error": "failed to record attendance"}), 500
 
@@ -135,4 +197,48 @@ def scan_attendance():
             "netid": netid,
             "course_id": course_id,
         }
+    )
+
+
+# Instructor-only CSV dump of every attendance record for a course,
+# one CSV row per (session, student-who-attended).
+@attendance_bp.route("/attendance/export", methods=["GET"])
+def export_attendance():
+    if "netid" not in session:
+        return jsonify({"error": "not authenticated"}), 401
+    if not session.get("is_instructor"):
+        return jsonify({"error": "access denied"}), 403
+
+    course_id = request.args.get("course_id")
+    if not course_id:
+        return jsonify({"error": "missing course_id"}), 400
+    if not repository.get_course(course_id):
+        return jsonify({"error": "course not found"}), 404
+
+    rows = repository.get_course_attendance(course_id)
+
+    # Build the CSV in memory. Small per-course volume makes streaming overkill.
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(
+        ["netid", "name", "email", "class_date", "session_id", "scanned_at"]
+    )
+    for row in rows:
+        writer.writerow(
+            [
+                row["netid"],
+                row["name"],
+                row["email"],
+                row["class_date"],
+                row["session_id"],
+                row["scanned_at"],
+            ]
+        )
+
+    return Response(
+        buf.getvalue(),
+        mimetype="text/csv",
+        headers={
+            "Content-Disposition": f'attachment; filename="attendance_{course_id}.csv"'
+        },
     )
