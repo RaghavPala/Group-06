@@ -1,0 +1,233 @@
+.iphone-pro {
+  background-color: #ffffff;
+  width: 100%;
+  min-width: 402px;
+  min-height: 874px;
+  position: relative;
+}
+
+.iphone-pro .rectangle {
+  position: absolute;
+  top: 92px;
+  left: 151px;
+  width: 100px;
+  height: 99px;
+  background-color: #d9d9d9;
+  border-radius: 100px;
+}
+
+.iphone-pro .img {
+  position: absolute;
+  top: 426px;
+  left: 77px;
+  width: 251px;
+  height: 52px;
+}
+
+.iphone-pro .rectangle-2 {
+  position: absolute;
+  top: 522px;
+  left: 78px;
+  width: 249px;
+  height: 53px;
+}
+
+.iphone-pro .text-wrapper {
+  position: absolute;
+  top: 218px;
+  left: 48px;
+  width: 310px;
+  font-family: "Inter-Bold", Helvetica;
+  font-weight: 700;
+  color: #cb6307;
+  font-size: 20px;
+  text-align: center;
+  letter-spacing: 0;
+  line-height: normal;
+}
+
+.iphone-pro .div {
+  position: absolute;
+  top: 398px;
+  left: 77px;
+  width: 81px;
+  font-family: "Inter-Light", Helvetica;
+  font-weight: 300;
+  color: #d27b18f5;
+  font-size: 20px;
+  text-align: center;
+  letter-spacing: 0;
+  line-height: normal;
+}
+
+.iphone-pro .text-wrapper-2 {
+  position: absolute;
+  top: 497px;
+  left: 77px;
+  width: 121px;
+  font-family: "Inter-Light", Helvetica;
+  font-weight: 300;
+  color: #d27b18f5;
+  font-size: 20px;
+  text-align: center;
+  letter-spacing: 0;
+  line-height: normal;
+}
+
+.iphone-pro .text-wrapper-3 {
+  position: absolute;
+  top: 444px;
+  left: 117px;
+  width: 149px;
+  font-family: "Inter-Light", Helvetica;
+  font-weight: 300;
+  color: #f4b46ccc;
+  font-size: 20px;
+  text-align: center;
+  letter-spacing: 0;
+  line-height: normal;
+  white-space: nowrap;
+}
+
+.iphone-pro .text-wrapper-4 {
+  position: absolute;
+  top: 540px;
+  left: 99px;
+  width: 160px;
+  font-family: "Inter-Light", Helvetica;
+  font-weight: 300;
+  color: #f4b46c;
+  font-size: 20px;
+  text-align: center;
+  letter-spacing: 0;
+  line-height: normal;
+  white-space: nowrap;
+}
+
+.iphone-pro .text-wrapper-5 {
+  position: absolute;
+  top: 594px;
+  left: 189px;
+  width: 186px;
+  font-family: "Inter-Bold", Helvetica;
+  font-weight: 700;
+  color: #cb6307;
+  font-size: 11px;
+  text-align: center;
+  letter-spacing: 0;
+  line-height: normal;
+}
+
+.iphone-pro .rectangle-3 {
+  position: absolute;
+  top: 664px;
+  left: 123px;
+  width: 157px;
+  height: 47px;
+  background-color: #cb6307;
+  border-radius: 60px;
+}
+
+.iphone-pro .text-wrapper-6 {
+  position: absolute;
+  top: 673px;
+  left: 140px;
+  width: 124px;
+  font-family: "Inter-Bold", Helvetica;
+  font-weight: 700;
+  color: #ffffff;
+  font-size: 20px;
+  text-align: center;
+  letter-spacing: 0;
+  line-height: normal;
+}
+
+.iphone-pro .new-to-tracker {
+  position: absolute;
+  top: 756px;
+  left: 87px;
+  width: 231px;
+  font-family: "Inter-Bold", Helvetica;
+  font-weight: 700;
+  color: transparent;
+  font-size: 13px;
+  text-align: center;
+  letter-spacing: 0;
+  line-height: normal;
+}
+
+.iphone-pro .span {
+  color: #1e1e1e;
+}
+
+.iphone-pro .text-wrapper-7 {
+  color: #cb6307;
+}
+
+.iphone-pro .image {
+  top: 85px;
+  left: 137px;
+  width: 133px;
+  height: 114px;
+  aspect-ratio: 1.16;
+  position: absolute;
+  object-fit: cover;
+}
+
+.iphone-pro .text-wrapper-8 {
+  position: absolute;
+  top: 283px;
+  left: 56px;
+  width: 102px;
+  font-family: "Inter-Bold", Helvetica;
+  font-weight: 700;
+  color: #cb6307;
+  font-size: 20px;
+  text-align: center;
+  letter-spacing: 0;
+  line-height: normal;
+}
+
+.iphone-pro .image-2 {
+  top: 537px;
+  left: 280px;
+  width: 25px;
+  height: 25px;
+  aspect-ratio: 1;
+  position: absolute;
+  object-fit: cover;
+}
+
+.iphone-pro .image-3 {
+  top: 537px;
+  left: 91px;
+  width: 25px;
+  height: 26px;
+  aspect-ratio: 0.95;
+  position: absolute;
+  object-fit: cover;
+}
+
+.iphone-pro .image-4 {
+  top: 438px;
+  left: 91px;
+  width: 25px;
+  height: 27px;
+  aspect-ratio: 0.92;
+  position: absolute;
+  object-fit: cover;
+}
+
+.iphone-pro .p {
+  position: absolute;
+  top: 315px;
+  left: 70px;
+  width: 254px;
+  font-family: "Inter-Medium", Helvetica;
+  font-weight: 500;
+  color: #000000;
+  font-size: 15px;
+  text-align: center;
+  letter-spacing: 0;
+  line-height: normal;
+}
