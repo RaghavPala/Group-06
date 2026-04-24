@@ -2,7 +2,7 @@
 
 Group project for CS 3354 - Smart Attendance Tracker.
 
-> **Windows users — read first.** The simplest, most compatible dev setup on Windows is to install **WSL 2 with Ubuntu** and do everything below inside the Ubuntu shell. This gives you a real Linux environment that matches what the rest of the team uses, avoids path / line-ending / toolchain differences, and lets Docker Desktop integrate natively.
+> **Windows users read first.** The simplest, most compatible dev setup on Windows is to install **WSL 2 with Ubuntu** and do everything below inside the Ubuntu shell. This gives you a real Linux environment that avoids path / line-ending / toolchain differences, and lets Docker Desktop integrate natively.
 >
 > Open PowerShell as admin and run:
 > ```powershell
