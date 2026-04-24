@@ -1,0 +1,1 @@
+from smart_attendance.attendance.routes import attendance_bp
