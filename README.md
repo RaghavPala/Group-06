@@ -28,13 +28,12 @@ If either command fails, install Docker:
 **macOS** (requires macOS within the last 3 major releases, ≥4 GB RAM)
 - Official: download the Apple Silicon or Intel `.dmg` from <https://www.docker.com/products/docker-desktop/>, drag Docker to Applications, launch it once, accept the terms.
 - Unofficial shortcut: `brew install --cask docker-desktop` also works (community cask; installs the same app).
-- Docker Desktop is free for personal, education, and small-business use (<250 employees and <$10M revenue); otherwise a paid subscription is required.
+
 
 **Windows 10/11** (64-bit, 8 GB RAM, hardware virtualization enabled in BIOS/UEFI; Win 10 22H2 build 19045+ or Win 11 23H2 build 22631+)
 - Install Docker Desktop from <https://www.docker.com/products/docker-desktop/>.
 - Default backend is WSL 2 (installer will enable it; reboot may be required). Hyper-V backend also supported if preferred.
 - Launch Docker Desktop once before using `docker` from PowerShell / terminal.
-- Same licensing terms as macOS above.
 
 **Linux**
 
@@ -46,7 +45,7 @@ sudo systemctl enable --now docker
 sudo usermod -aG docker $USER   # log out + back in so `docker` works without sudo
 ```
 
-Fedora (use Docker's official repo — the in-tree `docker` package was removed in favor of Podman):
+Fedora:
 ```bash
 sudo dnf -y install dnf-plugins-core
 sudo dnf config-manager addrepo --from-repofile=https://download.docker.com/linux/fedora/docker-ce.repo
@@ -82,7 +81,7 @@ docker run --rm hello-world
 A venv keeps this project's dependencies isolated from your system Python. Create it once inside the repo root:
 
 ```bash
-python -m venv .venv          # or python3 on some systems
+python -m venv .venv          # or python3 on some systems, try if needed
 ```
 
 Activate it every time you open a new terminal:
