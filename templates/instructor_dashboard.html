@@ -235,8 +235,12 @@ body { background: var(--bg-secondary); }
       <div class="stat-lbl">Attendance rate</div>
     </div>
     <div class="stat-card">
-      <div class="stat-num" id="timer-display">10:00</div>
+      <div class="stat-num" id="timer-display">—:——</div>
       <div class="stat-lbl">Time remaining</div>
+      <div style="margin-top:10px; display:flex; gap:8px; justify-content:center;">
+        <button class="btn btn-primary" id="start-session-btn" onclick="startSession()" style="font-size:12px; padding:5px 12px; width:auto;">Start</button>
+        <button class="btn btn-outline" id="end-session-btn" onclick="endSession()" style="font-size:12px; padding:5px 12px; width:auto; display:none;">End</button>
+      </div>
     </div>
   </div>
 
@@ -299,7 +303,8 @@ body { background: var(--bg-secondary); }
 <script>
   var totalStudents = 50;
   var presentCount  = 0;
-  var sessionSeconds = 10 * 60;
+  var sessionSeconds = 0;
+  var timerInterval = null;
 
   function pad(n) { return String(n).padStart(2, '0'); }
 
@@ -309,14 +314,82 @@ body { background: var(--bg-secondary); }
     document.getElementById('pct').textContent = pct + '%';
   }
 
-  function tickTimer() {
-    if (sessionSeconds > 0) sessionSeconds--;
+  function setSessionActive(secondsRemaining) {
+    sessionSeconds = secondsRemaining;
+    document.getElementById('start-session-btn').style.display = 'none';
+    document.getElementById('end-session-btn').style.display = '';
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(function() {
+      if (sessionSeconds > 0) {
+        sessionSeconds--;
+        var m = Math.floor(sessionSeconds / 60);
+        var s = sessionSeconds % 60;
+        document.getElementById('timer-display').textContent = pad(m) + ':' + pad(s);
+      } else {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        document.getElementById('timer-display').textContent = '0:00';
+        var courseId = document.getElementById('course-select').value;
+        fetch('/session/end', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({course_id: courseId})
+        }).then(function() { setSessionInactive(); });
+      }
+    }, 1000);
     var m = Math.floor(sessionSeconds / 60);
     var s = sessionSeconds % 60;
     document.getElementById('timer-display').textContent = pad(m) + ':' + pad(s);
   }
 
-  setInterval(tickTimer, 1000);
+  function setSessionInactive() {
+    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+    document.getElementById('timer-display').textContent = '—:——';
+    document.getElementById('start-session-btn').style.display = '';
+    document.getElementById('end-session-btn').style.display = 'none';
+  }
+
+  function startSession() {
+    var courseId = document.getElementById('course-select').value;
+    if (!courseId) { alert('Select a course first.'); return; }
+    fetch('/session/start', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({course_id: courseId, window_minutes: 15, duration_minutes: 75})
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.window_minutes) {
+        setSessionActive(data.window_minutes * 60);
+      } else {
+        alert(data.error || 'Could not start session.');
+      }
+    });
+  }
+
+  function endSession() {
+    var courseId = document.getElementById('course-select').value;
+    fetch('/session/end', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({course_id: courseId})
+    })
+    .then(function(r) { return r.json(); })
+    .then(function() { setSessionInactive(); });
+  }
+
+  function syncSessionStatus(courseId) {
+    fetch('/session/status/' + encodeURIComponent(courseId))
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.active && data.seconds_remaining > 0) {
+          setSessionActive(data.seconds_remaining);
+        } else {
+          setSessionInactive();
+        }
+      });
+  }
+
   updateStats();
 
   function addCheckin(netid) {
@@ -380,6 +453,7 @@ body { background: var(--bg-secondary); }
     var courseId = sel.value;
     loadRoster(courseId);
     rosterPollInterval = setInterval(function() { loadRoster(courseId); }, 10000);
+    syncSessionStatus(courseId);
   }
 
   fetch('/instructor/courses')
@@ -395,8 +469,10 @@ body { background: var(--bg-secondary); }
       });
       if (data.courses.length > 0) {
         document.getElementById('course-title').textContent = sel.options[0].text;
-        loadRoster(sel.value);
-        rosterPollInterval = setInterval(function() { loadRoster(sel.value); }, 10000);
+        var firstCourse = sel.value;
+        loadRoster(firstCourse);
+        rosterPollInterval = setInterval(function() { loadRoster(firstCourse); }, 10000);
+        syncSessionStatus(firstCourse);
       }
     })
     .catch(function() {

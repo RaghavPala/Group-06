@@ -234,6 +234,42 @@ def start_session(course_id, window_minutes, duration_minutes):
         return cur.fetchone()["session_id"]
 
 
+def end_session(course_id):
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE class_sessions
+            SET is_active = FALSE
+            WHERE course_id = %s AND is_active = TRUE
+            RETURNING session_id
+            """,
+            (course_id,),
+        )
+        return cur.fetchone() is not None
+
+
+def get_session_status(course_id):
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT session_id,
+                   is_active,
+                   GREATEST(0, EXTRACT(EPOCH FROM (attendance_window_end - CURRENT_TIMESTAMP)))::int AS seconds_remaining
+            FROM class_sessions
+            WHERE course_id = %s
+              AND is_active = TRUE
+              AND attendance_window_end > CURRENT_TIMESTAMP
+            ORDER BY start_time DESC
+            LIMIT 1
+            """,
+            (course_id,),
+        )
+        row = cur.fetchone()
+        if row:
+            return {"active": True, "seconds_remaining": row["seconds_remaining"], "session_id": row["session_id"]}
+        return {"active": False, "seconds_remaining": 0}
+
+
 # Feeds the CSV export. One row per (student, session they attended).
 # Absent students are implicit (no row) — the schema only stores presence.
 def get_course_attendance(course_id):
