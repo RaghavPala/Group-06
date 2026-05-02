@@ -131,6 +131,23 @@ def get_session_status(course_id):
     return jsonify(status)
 
 
+# Returns students who have been marked present in today's active session.
+# Used by the instructor dashboard to populate the Present panel on load and after each scan.
+@attendance_bp.route("/session/present/<course_id>", methods=["GET"])
+def get_session_present(course_id):
+    if "netid" not in session:
+        return jsonify({"error": "not authenticated"}), 401
+    if not session.get("is_instructor"):
+        return jsonify({"error": "access denied"}), 403
+    course = repository.get_course(course_id)
+    if not course:
+        return jsonify({"error": "course not found"}), 404
+    if course["instructor"] != session["netid"]:
+        return jsonify({"error": "not your course"}), 403
+    present = repository.get_session_present(course_id)
+    return jsonify({"present": present})
+
+
 @attendance_bp.route("/enroll/qr", methods=["GET"])
 def get_enrollment_qr():
     if "netid" not in session:

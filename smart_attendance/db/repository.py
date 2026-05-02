@@ -270,6 +270,25 @@ def get_session_status(course_id):
         return {"active": False, "seconds_remaining": 0}
 
 
+# All students marked present in today's active session for a course.
+def get_session_present(course_id):
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT u.netid, u.name, ar.scanned_at
+            FROM attendance_records ar
+            JOIN class_sessions cs ON cs.session_id = ar.session_id
+            JOIN users u ON u.netid = ar.student_netid
+            WHERE cs.course_id = %s
+              AND cs.is_active = TRUE
+              AND cs.class_date = CURRENT_DATE
+            ORDER BY ar.scanned_at
+            """,
+            (course_id,),
+        )
+        return cur.fetchall()
+
+
 # Feeds the CSV export. One row per (student, session they attended).
 # Absent students are implicit (no row) — the schema only stores presence.
 def get_course_attendance(course_id):
