@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}Sign In — Attendance Tracker{% endblock %}
+
+{% block extra_styles %}
+.login-page {
+  display: flex;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+
+.login-card {
+  background: var(--bg);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 36px 32px;
+  width: 100%;
+  max-width: 380px;
+}
+
+.login-logo {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--orange-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  font-size: 28px;
+}
+
+.login-title {
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--orange);
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.login-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.field-group { margin-bottom: 16px; }
+
+.field-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--orange);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.field-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  color: var(--text);
+  background: var(--bg-secondary);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.field-input:focus { border-color: var(--orange); background: var(--bg); }
+.field-input::placeholder { color: #bbb; }
+
+.forgot-row {
+  text-align: right;
+  margin-top: -8px;
+  margin-bottom: 20px;
+  font-size: 11px;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 16px 0;
+}
+.divider::before, .divider::after {
+  content: '';
+  flex: 1;
+  height: 0.5px;
+  background: var(--border);
+}
+
+.contact-line {
+  font-size: 12px;
+  text-align: center;
+  color: var(--text-muted);
+}
+{% endblock %}
+
+{% block body %}
+<div class="login-page">
+  <div class="login-card">
+    <div class="login-logo">🎓</div>
+    <div class="login-title">Attendance Tracker</div>
+    <div class="login-sub">Easy way to track your attendance</div>
+
+    {% if error %}
+      <div class="flash flash-error">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" action="/login">
+      <div class="field-group">
+        <label class="field-label" for="netid">Net ID</label>
+        <input class="field-input" id="netid" name="netid" type="text"
+               placeholder="e.g. abc123456" autocomplete="username" required />
+      </div>
+
+      <div class="field-group">
+        <label class="field-label" for="password">Password</label>
+        <input class="field-input" id="password" name="password" type="password"
+               placeholder="••••••••••" autocomplete="current-password" required />
+      </div>
+
+      <div class="forgot-row">
+        <a href="#">Forgot Password?</a>
+      </div>
+
+      <button type="submit" class="btn btn-primary">Sign in</button>
+    </form>
+
+    <div class="divider">or</div>
+    <div class="contact-line">
+      New to Tracker? <a href="#">Contact Us</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

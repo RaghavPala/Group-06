@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+{% block title %}My Courses — Attendance Tracker{% endblock %}
+
+{% block extra_styles %}
+.phone-shell {
+  max-width: 420px;
+  margin: 0 auto;
+  min-height: 100vh;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 20px 12px;
+  border-bottom: 0.5px solid var(--border);
+}
+
+.top-bar-left .greeting { font-size: 15px; font-weight: 500; }
+.top-bar-left .sub      { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+.avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--orange-light);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; cursor: pointer;
+}
+
+.main-content { flex: 1; padding: 16px 20px; overflow-y: auto; }
+
+.section-title {
+  font-size: 12px; font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+}
+
+.course-card {
+  background: var(--bg);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.course-info .course-code { font-size: 14px; font-weight: 500; }
+.course-info .course-name { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+.active-badge {
+  display: inline-block;
+  background: var(--green-light);
+  color: var(--green);
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 20px;
+  margin-top: 6px;
+}
+
+.qr-col { display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0; }
+
+.qr-wrap {
+  width: 90px; height: 90px;
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg-secondary);
+  overflow: hidden;
+}
+.qr-wrap canvas { display: block; }
+
+.qr-timer { font-size: 10px; color: var(--text-muted); }
+
+.no-session-label { font-size: 12px; color: var(--text-muted); }
+
+.add-btn {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; padding: 12px;
+  border: 1.5px dashed var(--orange);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--orange);
+  font-size: 14px; font-weight: 500;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: background 0.15s;
+}
+.add-btn:hover { background: var(--orange-light); }
+
+.bottom-nav {
+  display: flex;
+  border-top: 0.5px solid var(--border);
+  padding: 10px 0 20px;
+}
+.nav-item {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; gap: 3px;
+  font-size: 10px; color: var(--text-muted);
+  cursor: pointer;
+}
+.nav-item.active { color: var(--orange); }
+.nav-icon { font-size: 18px; }
+
+/* --- Modal --- */
+.modal-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 100;
+  align-items: flex-end;
+  justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+
+.modal-sheet {
+  background: var(--bg);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  padding: 24px 24px 36px;
+  width: 100%; max-width: 420px;
+}
+
+.modal-handle {
+  width: 40px; height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin: 0 auto 20px;
+}
+
+.modal-title { font-size: 16px; font-weight: 500; margin-bottom: 4px; }
+.modal-sub   { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
+
+.tabs { display: flex; gap: 0; border: 0.5px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 20px; overflow: hidden; }
+.tab {
+  flex: 1; padding: 9px; text-align: center;
+  font-size: 13px; font-weight: 500;
+  cursor: pointer; background: var(--bg-secondary); color: var(--text-muted);
+  border: none; transition: background 0.15s, color 0.15s;
+}
+.tab.active { background: var(--orange); color: #fff; }
+
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+.field-label {
+  display: block; font-size: 12px; font-weight: 500;
+  color: var(--orange); text-transform: uppercase;
+  letter-spacing: 0.04em; margin-bottom: 6px;
+}
+.field-input {
+  width: 100%; padding: 10px 12px;
+  border: 0.5px solid var(--border); border-radius: var(--radius-sm);
+  font-size: 14px; color: var(--text); background: var(--bg-secondary);
+  outline: none; transition: border-color 0.15s;
+  text-transform: uppercase; letter-spacing: 0.1em;
+}
+.field-input:focus { border-color: var(--orange); background: var(--bg); }
+
+.qr-scanner-box {
+  width: 100%; aspect-ratio: 1;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 10px; color: var(--text-muted); font-size: 13px;
+  border: 0.5px solid var(--border);
+  margin-bottom: 16px;
+}
+
+.close-btn {
+  background: none; border: none; font-size: 20px;
+  cursor: pointer; color: var(--text-muted);
+  position: absolute; top: 16px; right: 20px;
+}
+{% endblock %}
+
+{% block body %}
+<div class="phone-shell">
+  <div class="top-bar">
+    <div class="top-bar-left">
+      <div class="greeting">Hello, {{ netid }}</div>
+      <div class="sub">Today's sessions</div>
+    </div>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <form action="/logout" method="post">
+        <button type="submit" style="background:none; border:none; font-size:12px; color:var(--orange); font-weight:500; cursor:pointer; padding:0;">Logout</button>
+      </form>
+      <div class="avatar">👤</div>
+    </div>
+  </div>
+
+  <div class="main-content">
+    {% if message %}
+      <div class="flash flash-{{ message_type }}">{{ message }}</div>
+    {% endif %}
+
+    <div class="section-title">My courses</div>
+
+    {% for course in courses %}
+    <div class="course-card">
+      <div class="course-info">
+        <div class="course-code">{{ course.course_id }}</div>
+        <div class="course-name">{{ course.name }}</div>
+        {% if course.active %}
+          <span class="active-badge">Active</span>
+        {% endif %}
+      </div>
+
+      {% if course.active %}
+      <div class="qr-col">
+        <div class="qr-wrap">
+          <canvas id="qr-{{ loop.index }}"
+                  data-token="{{ course.token }}"
+                  width="88" height="88"></canvas>
+        </div>
+        <div class="qr-timer" id="timer-{{ loop.index }}">Refreshing in <span class="countdown">{{ seconds_remaining }}</span>s</div>
+      </div>
+      {% else %}
+      <div class="no-session-label">No session</div>
+      {% endif %}
+    </div>
+    {% else %}
+    <div style="text-align: center; color: var(--text-muted); font-size: 13px; padding: 24px 0;">
+      No courses yet — add one below!
+    </div>
+    {% endfor %}
+
+    <button class="add-btn" onclick="openModal()">
+      <span style="font-size:18px;">+</span> Add course
+    </button>
+  </div>
+
+  <nav class="bottom-nav">
+    <div class="nav-item active">
+      <div class="nav-icon">📋</div>Courses
+    </div>
+    <div class="nav-item">
+      <div class="nav-icon">👤</div>Profile
+    </div>
+  </nav>
+</div>
+
+<!-- Add Course Modal -->
+<div class="modal-overlay" id="modal" onclick="handleOverlayClick(event)">
+  <div class="modal-sheet" style="position:relative;">
+    <button class="close-btn" onclick="closeModal()">✕</button>
+    <div class="modal-handle"></div>
+    <div class="modal-title">Add a course</div>
+    <div class="modal-sub">Enter the code your professor shared, or scan their QR.</div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('code', this)">Enter code</button>
+      <button class="tab" onclick="switchTab('scan', this)">Scan QR</button>
+    </div>
+
+    <div id="pane-code" class="tab-pane active">
+      <form method="post" action="/enroll/join-form">
+        <label class="field-label" for="enroll_code">Enrollment code</label>
+        <input class="field-input" id="enroll_code" name="enrollment_code"
+               type="text" maxlength="8" placeholder="ABCD1234" autocomplete="off" />
+        <button type="submit" class="btn btn-primary" style="margin-top:16px;">Join course</button>
+      </form>
+    </div>
+
+    <div id="pane-scan" class="tab-pane">
+      <div class="qr-scanner-box">
+        <div style="font-size:36px;">📷</div>
+        <div>Camera access needed to scan</div>
+        <div style="font-size:11px;">Point at the professor's enrollment QR</div>
+      </div>
+      <div style="font-size:12px; color:var(--text-muted); text-align:center;">
+        Can't scan? Switch to "Enter code" tab
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- QR code library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+  function renderQRCodes() {
+    document.querySelectorAll('canvas[data-token]').forEach(function(canvas) {
+      var token = canvas.dataset.token;
+      if (!token) return;
+      var qr = new QRCode(canvas.parentElement, {
+        text: token, width: 88, height: 88,
+        colorDark: "#1e1e1e", colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.M
+      });
+      canvas.remove();
+    });
+  }
+
+  var secondsLeft = {{ seconds_remaining | default(30) }};
+  var countdowns = document.querySelectorAll('.countdown');
+
+  function tick() {
+    secondsLeft--;
+    countdowns.forEach(function(el) { el.textContent = secondsLeft; });
+    if (secondsLeft <= 0) { location.reload(); }
+  }
+
+  renderQRCodes();
+  setInterval(tick, 1000);
+
+  function openModal()  { document.getElementById('modal').classList.add('open'); }
+  function closeModal() { document.getElementById('modal').classList.remove('open'); }
+  function handleOverlayClick(e) { if (e.target === document.getElementById('modal')) closeModal(); }
+
+  function switchTab(name, btn) {
+    document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+    document.querySelectorAll('.tab-pane').forEach(function(p) { p.classList.remove('active'); });
+    btn.classList.add('active');
+    document.getElementById('pane-' + name).classList.add('active');
+  }
+</script>
+{% endblock %}
