@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}Attendance Tracker{% endblock %}</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --orange:        #cb6307;
+      --orange-light:  #f4e0ce;
+      --orange-dark:   #9e4c05;
+      --text:          #1e1e1e;
+      --text-muted:    #6b6b6b;
+      --border:        #e0e0e0;
+      --bg:            #ffffff;
+      --bg-secondary:  #f7f7f5;
+      --green:         #3b6d11;
+      --green-light:   #eaf3de;
+      --radius-sm:     8px;
+      --radius-md:     12px;
+      --radius-lg:     20px;
+      --radius-pill:   60px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      font-size: 15px;
+      color: var(--text);
+      background: var(--bg-secondary);
+      min-height: 100vh;
+    }
+
+    a { color: var(--orange); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .btn {
+      display: inline-block;
+      padding: 11px 24px;
+      border-radius: var(--radius-pill);
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.88; }
+    .btn-primary { background: var(--orange); color: #fff; width: 100%; text-align: center; }
+    .btn-outline { background: transparent; color: var(--orange); border: 1.5px solid var(--orange); }
+
+    .flash { padding: 10px 14px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 14px; }
+    .flash-error { background: #fdecea; color: #a32d2d; border: 0.5px solid #f09595; }
+    .flash-success { background: var(--green-light); color: var(--green); border: 0.5px solid #c0dd97; }
+
+    {% block extra_styles %}{% endblock %}
+  </style>
+</head>
+<body>
+  {% block body %}{% endblock %}
+</body>
+</html>

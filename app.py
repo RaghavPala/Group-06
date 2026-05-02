@@ -1,8 +1,8 @@
 import re, secrets
-from flask import Flask, request, redirect, url_for, render_template_string, session
+from flask import Flask, request, redirect, url_for, render_template, session
 from flask_bcrypt import Bcrypt
 from datetime import timedelta
-from views import attendance_bp
+from views import attendance_bp, db_get_student_courses, db_get_course, db_is_session_active, generate_token, get_current_epoch, get_window_seconds_remaining
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(32) # Change this before the final version, will log everyone out each time the server restarts
@@ -65,45 +65,64 @@ def login():
             else:
                 return redirect(url_for('student_dashboard'))
         else:
-            return "Incorrect password. Please try again."
+            return render_template("login.html", error="Incorrect password. Please try again.")
 
-    return render_template_string("""
-        <form method="post">
-            NetID: <input name="netid" type="text"><br>
-            Password: <input name = "password" type="password"><br>
-            <input type="submit">
-        </form>
-    """)
+    return render_template("login.html")
 
 @app.route('/instructor_dashboard')
 def instructor_dashboard():
-        if "netid" not in session:
-            return redirect(url_for("login"))
-
-        if not session.get("is_instructor"):
-            return "Access denied."
-
-        return f"""
-            Instructor Dashboard: {session['netid']}
-            <form action="/logout" method="post">
-                <button type="submit">Logout</button>
-            </form>
-        """
+    if "netid" not in session:
+        return redirect(url_for("login"))
+    if not session.get("is_instructor"):
+        return "Access denied.", 403
+    return render_template("instructor_dashboard.html", netid=session["netid"])
 
 @app.route('/student_dashboard')
 def student_dashboard():
     if "netid" not in session:
         return redirect(url_for("login"))
-
     if session.get("is_instructor"):
-        return "Access denied."
+        return "Access denied.", 403
 
-    return f"""
-        Student Dashboard: {session['netid']}
-        <form action="/logout" method="post">
-                <button type="submit">Logout</button>
-        </form>
-    """
+    netid = session["netid"]
+    course_ids = db_get_student_courses(netid)
+    epoch = get_current_epoch()
+    seconds_remaining = get_window_seconds_remaining()
+
+    courses = []
+    for cid in course_ids:
+        course = db_get_course(cid) or {"course_id": cid, "name": cid}
+        active = db_is_session_active(cid)
+        token = generate_token(netid, cid, epoch) if active else None
+        courses.append({
+            "course_id": cid,
+            "name": course.get("name", cid),
+            "active": active,
+            "token": token,
+        })
+
+    return render_template("student_dashboard.html",
+                           netid=netid,
+                           courses=courses,
+                           seconds_remaining=seconds_remaining)
+
+@app.route('/enroll/join-form', methods=['POST'])
+def join_course_form():
+    """HTML form version of enroll/join for the student dashboard modal."""
+    if "netid" not in session:
+        return redirect(url_for("login"))
+    from views import db_get_course_by_enrollment_code, db_is_enrolled, db_enroll_student
+    netid = session["netid"]
+    code = request.form.get("enrollment_code", "").strip().upper()
+    if not code:
+        return redirect(url_for("student_dashboard"))
+    course = db_get_course_by_enrollment_code(code)
+    if not course:
+        return redirect(url_for("student_dashboard"))
+    cid = course["course_id"]
+    if not db_is_enrolled(netid, cid):
+        db_enroll_student(netid, cid)
+    return redirect(url_for("student_dashboard"))
 
 @app.route('/logout', methods=['POST'])
 def logout():

@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+{% block title %}Attendance Hub — {{ netid }}{% endblock %}
+
+{% block extra_styles %}
+body { background: var(--bg-secondary); }
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 24px 40px;
+}
+
+/* Top nav */
+.top-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 0; border-bottom: 0.5px solid var(--border);
+  margin-bottom: 28px;
+}
+
+.brand { font-size: 18px; font-weight: 500; color: var(--orange); }
+
+.nav-links { display: flex; gap: 24px; }
+.nav-links a {
+  font-size: 13px; color: var(--text-muted);
+  text-decoration: none; padding-bottom: 2px;
+}
+.nav-links a.active { color: var(--orange); border-bottom: 1.5px solid var(--orange); }
+.nav-links a:hover { color: var(--orange); text-decoration: none; }
+
+.user-pill {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 13px; color: var(--text-muted);
+}
+.user-pill form { display: inline; }
+.user-pill button {
+  background: none; border: none; cursor: pointer;
+  font-size: 13px; color: var(--orange); font-weight: 500; padding: 0;
+}
+
+/* Course header */
+.course-header {
+  display: flex; align-items: center; gap: 14px; margin-bottom: 24px; flex-wrap: wrap;
+}
+.course-title { font-size: 20px; font-weight: 500; }
+
+.session-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--green-light); color: var(--green);
+  font-size: 12px; font-weight: 500;
+  padding: 4px 12px; border-radius: 20px;
+}
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+
+/* Course selector */
+.course-select {
+  margin-left: auto; font-size: 13px;
+  padding: 7px 12px; border: 0.5px solid var(--border);
+  border-radius: var(--radius-sm); background: var(--bg); color: var(--text);
+  outline: none; cursor: pointer;
+}
+.course-select:focus { border-color: var(--orange); }
+
+/* Stats row */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: var(--bg);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  text-align: center;
+}
+.stat-num { font-size: 28px; font-weight: 500; color: var(--orange); }
+.stat-lbl { font-size: 12px; color: var(--text-muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+
+/* Main grid */
+.main-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 20px;
+}
+
+/* Scan panel */
+.panel {
+  background: var(--bg);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 20px 24px;
+}
+.panel-title {
+  font-size: 14px; font-weight: 500;
+  margin-bottom: 16px; color: var(--text);
+}
+
+.scan-area {
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius-md);
+  aspect-ratio: 4/3;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 10px; color: var(--text-muted);
+  background: var(--bg-secondary);
+  margin-bottom: 16px;
+}
+.scan-area .cam-icon { font-size: 44px; }
+.scan-area .cam-label { font-size: 14px; }
+.scan-area .cam-sub   { font-size: 12px; }
+
+.scan-status {
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* Recent check-ins */
+.checkin-list { display: flex; flex-direction: column; gap: 10px; }
+
+.checkin-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+}
+.checkin-netid { font-weight: 500; }
+.checkin-time  { color: var(--text-muted); font-size: 12px; }
+.checkin-tag {
+  background: var(--green-light); color: var(--green);
+  font-size: 11px; font-weight: 500;
+  padding: 2px 8px; border-radius: 20px;
+}
+
+.empty-state {
+  text-align: center; color: var(--text-muted);
+  font-size: 13px; padding: 32px 0;
+}
+
+/* Enrollment QR panel */
+.enroll-qr-box {
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 10px;
+  background: var(--bg-secondary);
+  margin-top: 16px;
+}
+.enroll-code {
+  font-size: 22px; font-weight: 500;
+  letter-spacing: 0.12em; color: var(--orange);
+}
+{% endblock %}
+
+{% block body %}
+<div class="shell">
+  <nav class="top-nav">
+    <div class="brand">Attendance Hub</div>
+    <div class="nav-links">
+      <a href="/instructor_dashboard" class="active">Live stream</a>
+      <a href="#">Course info</a>
+      <a href="#">Reports</a>
+      <a href="#">Help</a>
+    </div>
+    <div class="user-pill">
+      <span>{{ netid }}</span>
+      <form action="/logout" method="post">
+        <button type="submit">Logout</button>
+      </form>
+    </div>
+  </nav>
+
+  <div class="course-header">
+    <div class="course-title">Software Engineering — CS 3354</div>
+    <div class="session-badge"><div class="dot"></div>Session live</div>
+    <select class="course-select">
+      <option>CS 3354 — Software Engineering</option>
+    </select>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-num" id="present-count">0</div>
+      <div class="stat-lbl">Students present</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="pct">0%</div>
+      <div class="stat-lbl">Attendance rate</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="timer-display">10:00</div>
+      <div class="stat-lbl">Time remaining</div>
+    </div>
+  </div>
+
+  <div class="main-grid">
+
+    <!-- Webcam scan panel -->
+    <div class="panel">
+      <div class="panel-title">Webcam scanner</div>
+      <div class="scan-area" id="scan-area">
+        <div class="cam-icon">📷</div>
+        <div class="cam-label">Webcam scanner active</div>
+        <div class="cam-sub">Point at a student's QR code to mark them present</div>
+      </div>
+      <div class="scan-status" id="scan-status">Waiting for QR code…</div>
+    </div>
+
+    <!-- Right column -->
+    <div style="display:flex; flex-direction:column; gap:20px;">
+
+      <!-- Recent check-ins -->
+      <div class="panel">
+        <div class="panel-title">Recent check-ins</div>
+        <div class="checkin-list" id="checkin-list">
+          <div class="empty-state">No check-ins yet</div>
+        </div>
+      </div>
+
+      <!-- Enrollment QR -->
+      <div class="panel">
+        <div class="panel-title">Enrollment QR</div>
+        <div style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">
+          Students scan this once to join the course roster.
+        </div>
+        <button class="btn btn-outline" id="show-enroll-btn" onclick="loadEnrollQR()" style="width:100%; margin-bottom:0;">
+          Show enrollment QR
+        </button>
+        <div class="enroll-qr-box" id="enroll-box" style="display:none;">
+          <div id="enroll-qr-canvas"></div>
+          <div style="font-size:12px; color:var(--text-muted);">Or share the code:</div>
+          <div class="enroll-code" id="enroll-code-text">—</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+  var totalStudents = 50;
+  var presentCount  = 0;
+  var sessionSeconds = 10 * 60;
+
+  function pad(n) { return String(n).padStart(2, '0'); }
+
+  function updateStats() {
+    document.getElementById('present-count').textContent = presentCount;
+    var pct = totalStudents > 0 ? Math.round(presentCount / totalStudents * 100) : 0;
+    document.getElementById('pct').textContent = pct + '%';
+  }
+
+  function tickTimer() {
+    if (sessionSeconds > 0) sessionSeconds--;
+    var m = Math.floor(sessionSeconds / 60);
+    var s = sessionSeconds % 60;
+    document.getElementById('timer-display').textContent = pad(m) + ':' + pad(s);
+  }
+
+  setInterval(tickTimer, 1000);
+  updateStats();
+
+  function addCheckin(netid) {
+    presentCount++;
+    updateStats();
+    var list = document.getElementById('checkin-list');
+    var empty = list.querySelector('.empty-state');
+    if (empty) empty.remove();
+
+    var now = new Date();
+    var time = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+    var item = document.createElement('div');
+    item.className = 'checkin-item';
+    item.innerHTML = '<span class="checkin-netid">' + netid + '</span>' +
+                     '<span class="checkin-time">' + time + '</span>' +
+                     '<span class="checkin-tag">Present</span>';
+    list.prepend(item);
+
+    document.getElementById('scan-status').textContent = '✓ Marked present: ' + netid;
+    document.getElementById('scan-status').style.color = 'var(--green)';
+    setTimeout(function() {
+      document.getElementById('scan-status').textContent = 'Waiting for QR code…';
+      document.getElementById('scan-status').style.color = '';
+    }, 3000);
+  }
+
+  function loadEnrollQR() {
+    fetch('/enroll/qr?course_id=CS3354.001')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var code = data.enrollment_code;
+        document.getElementById('enroll-code-text').textContent = code;
+        document.getElementById('enroll-qr-canvas').innerHTML = '';
+        new QRCode(document.getElementById('enroll-qr-canvas'), {
+          text: code, width: 160, height: 160,
+          colorDark: '#1e1e1e', colorLight: '#ffffff',
+          correctLevel: QRCode.CorrectLevel.M
+        });
+        document.getElementById('enroll-box').style.display = 'flex';
+        document.getElementById('show-enroll-btn').style.display = 'none';
+      })
+      .catch(function() {
+        alert('Could not load enrollment QR — make sure you are logged in as an instructor.');
+      });
+  }
+</script>
+{% endblock %}
