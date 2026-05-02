@@ -160,6 +160,28 @@ body { background: var(--bg-secondary); }
   font-size: 22px; font-weight: 500;
   letter-spacing: 0.12em; color: var(--orange);
 }
+
+/* Create course modal */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.4); z-index: 100;
+  align-items: center; justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--bg); border-radius: var(--radius-md);
+  padding: 28px 32px; width: 380px; max-width: 90vw;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.modal-title { font-size: 16px; font-weight: 500; }
+.modal input {
+  width: 100%; padding: 9px 12px; font-size: 13px;
+  border: 0.5px solid var(--border); border-radius: var(--radius-sm);
+  outline: none; box-sizing: border-box;
+}
+.modal input:focus { border-color: var(--orange); }
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+.modal-error { font-size: 12px; color: #c0392b; min-height: 16px; }
 {% endblock %}
 
 {% block body %}
@@ -186,6 +208,21 @@ body { background: var(--bg-secondary); }
     <select class="course-select" id="course-select" onchange="onCourseChange()">
       <option value="">Loading courses…</option>
     </select>
+    <button class="btn btn-outline" onclick="openCreateCourse()" style="font-size:13px; padding:7px 14px;">+ New course</button>
+  </div>
+
+  <!-- Create course modal -->
+  <div class="modal-overlay" id="create-course-modal">
+    <div class="modal">
+      <div class="modal-title">Create new course</div>
+      <input type="text" id="new-course-id" placeholder="Course ID (e.g. CS1234.001)" />
+      <input type="text" id="new-course-name" placeholder="Course name" />
+      <div class="modal-error" id="create-course-error"></div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeCreateCourse()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitCreateCourse()">Create</button>
+      </div>
+    </div>
   </div>
 
   <div class="stats-grid">
@@ -321,6 +358,46 @@ body { background: var(--bg-secondary); }
     .catch(function() {
       document.getElementById('course-title').textContent = 'Could not load courses';
     });
+
+  function openCreateCourse() {
+    document.getElementById('new-course-id').value = '';
+    document.getElementById('new-course-name').value = '';
+    document.getElementById('create-course-error').textContent = '';
+    document.getElementById('create-course-modal').classList.add('open');
+  }
+
+  function closeCreateCourse() {
+    document.getElementById('create-course-modal').classList.remove('open');
+  }
+
+  function submitCreateCourse() {
+    var courseId = document.getElementById('new-course-id').value.trim();
+    var courseName = document.getElementById('new-course-name').value.trim();
+    var errEl = document.getElementById('create-course-error');
+    if (!courseId || !courseName) { errEl.textContent = 'Both fields are required.'; return; }
+
+    fetch('/course', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({course_id: courseId, course_name: courseName})
+    })
+    .then(function(r) { return r.json().then(function(d) { return {status: r.status, data: d}; }); })
+    .then(function(res) {
+      if (res.status === 201) {
+        closeCreateCourse();
+        var sel = document.getElementById('course-select');
+        var opt = document.createElement('option');
+        opt.value = res.data.course_id;
+        opt.textContent = res.data.course_id + ' — ' + res.data.course_name;
+        sel.appendChild(opt);
+        sel.value = res.data.course_id;
+        onCourseChange();
+      } else {
+        errEl.textContent = res.data.error || 'Failed to create course.';
+      }
+    })
+    .catch(function() { errEl.textContent = 'Network error. Try again.'; });
+  }
 
   function loadEnrollQR() {
     var courseId = document.getElementById('course-select').value;
