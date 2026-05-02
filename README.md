@@ -17,7 +17,7 @@ This is the fastest way to get a reproducible Postgres instance with the schema 
 
 ### 0. Install Docker
 
-Verify you already have it:
+Verify if you already have it:
 
 ```bash
 docker --version
@@ -45,38 +45,12 @@ sudo systemctl enable --now docker
 sudo usermod -aG docker $USER   # log out + back in
 ```
 
-RHEL / CentOS Stream / Rocky / Alma:
-```bash
-sudo dnf -y install dnf-plugins-core
-sudo dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
-sudo dnf -y install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-sudo systemctl enable --now docker
-sudo usermod -aG docker $USER
-```
-
-Arch:
-```bash
-sudo pacman -S docker docker-compose
-sudo systemctl enable --now docker
-sudo usermod -aG docker $USER
-```
 
 After install, confirm:
 
 ```bash
 docker run --rm hello-world
 ```
-
-**macOS** (requires macOS within the last 3 major releases, ≥4 GB RAM)
-- Official: download the Apple Silicon or Intel `.dmg` from <https://www.docker.com/products/docker-desktop/>, drag Docker to Applications, launch it once, accept the terms.
-- Unofficial shortcut: `brew install --cask docker-desktop` also works (community cask; installs the same app).
-
-
-**Windows 10/11** (64-bit, 8 GB RAM, hardware virtualization enabled in BIOS/UEFI; Win 10 22H2 build 19045+ or Win 11 23H2 build 22631+)
-- Install Docker Desktop from <https://www.docker.com/products/docker-desktop/>.
-- Default backend is WSL 2 (installer will enable it; reboot may be required). Hyper-V backend also supported if preferred.
-- Launch Docker Desktop once before using `docker` from PowerShell / terminal.
-
 
 
 ### 1. Create and activate a Python virtual environment
@@ -87,13 +61,11 @@ A venv keeps this project's dependencies isolated from your system Python. Creat
 python -m venv .venv          # or python3 on some systems, try if needed
 ```
 
-Activate it every time you open a new terminal:
+Activate it every time you want to run server:
 
 | Shell                         | Activate                           | Deactivate    |
 |-------------------------------|------------------------------------|---------------|
 | macOS / Linux / WSL (bash, zsh) | `source .venv/bin/activate`       | `deactivate`  |
-| Windows PowerShell            | `.venv\Scripts\Activate.ps1`       | `deactivate`  |
-| Windows cmd.exe               | `.venv\Scripts\activate.bat`       | `deactivate`  |
 
 Your prompt should now show `(.venv)` at the front. If PowerShell blocks activation with an execution-policy error, run once in an admin PowerShell: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
 
@@ -130,19 +102,13 @@ docker compose down -v && docker compose up -d
 export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/smart_attendance
 ```
 
-On Windows PowerShell:
-
-```powershell
-$env:DATABASE_URL="postgresql://postgres:postgres@localhost:5432/smart_attendance"
-```
 
 ### 5. Run the app
 
 ```bash
-python app.py
+python3 app.py
 ```
 
-Then open <http://127.0.0.1:5000/>.
 
 Seeded accounts (from `db-schema-seeding/seed.sql`):
 
@@ -184,7 +150,6 @@ If you'd rather install Postgres directly:
 ## Notes
 
 - The app requires `DATABASE_URL` at startup and will refuse to boot without it.
-  Auth and attendance both read from Postgres — there is no in-memory fallback.
 - `db-schema-seeding/schema.sql` defines the tables.
 - `db-schema-seeding/seed.sql` inserts demo users, courses, enrollments, and a
   currently-active session for `CS3354.001` (the session's attendance window is
