@@ -2,13 +2,14 @@
 
 Group project for CS 3354 - Smart Attendance Tracker.
 
-> **Windows users read first.** The simplest, most compatible dev setup on Windows is to install **WSL 2 with Ubuntu** and do everything below inside the Ubuntu shell. This gives you a real Linux environment that avoids path / line-ending / toolchain differences, and lets Docker Desktop integrate natively.
+## !! WINDOWS USERS READ !!
+> The simplest, most compatible dev setup on Windows is to install **WSL 2 with Ubuntu** and do everything below inside the Ubuntu shell. This gives you a real Linux environment that avoids path / line-ending / toolchain differences, and lets Docker Desktop integrate natively.
 >
 > Open PowerShell as admin and run:
 > ```powershell
 > wsl --install -d Ubuntu
 > ```
-> Reboot, set up your Ubuntu username/password, then open the "Ubuntu" app and follow the rest of this README from there.
+> Reboot, open the "Ubuntu" app, set up your Ubuntu username/password, and follow the LINUX instructions below.
 
 ## Quick Start (Docker — recommended)
 
@@ -24,16 +25,6 @@ docker compose version
 ```
 
 If either command fails, install Docker:
-
-**macOS** (requires macOS within the last 3 major releases, ≥4 GB RAM)
-- Official: download the Apple Silicon or Intel `.dmg` from <https://www.docker.com/products/docker-desktop/>, drag Docker to Applications, launch it once, accept the terms.
-- Unofficial shortcut: `brew install --cask docker-desktop` also works (community cask; installs the same app).
-
-
-**Windows 10/11** (64-bit, 8 GB RAM, hardware virtualization enabled in BIOS/UEFI; Win 10 22H2 build 19045+ or Win 11 23H2 build 22631+)
-- Install Docker Desktop from <https://www.docker.com/products/docker-desktop/>.
-- Default backend is WSL 2 (installer will enable it; reboot may be required). Hyper-V backend also supported if preferred.
-- Launch Docker Desktop once before using `docker` from PowerShell / terminal.
 
 **Linux**
 
@@ -75,6 +66,18 @@ After install, confirm:
 ```bash
 docker run --rm hello-world
 ```
+
+**macOS** (requires macOS within the last 3 major releases, ≥4 GB RAM)
+- Official: download the Apple Silicon or Intel `.dmg` from <https://www.docker.com/products/docker-desktop/>, drag Docker to Applications, launch it once, accept the terms.
+- Unofficial shortcut: `brew install --cask docker-desktop` also works (community cask; installs the same app).
+
+
+**Windows 10/11** (64-bit, 8 GB RAM, hardware virtualization enabled in BIOS/UEFI; Win 10 22H2 build 19045+ or Win 11 23H2 build 22631+)
+- Install Docker Desktop from <https://www.docker.com/products/docker-desktop/>.
+- Default backend is WSL 2 (installer will enable it; reboot may be required). Hyper-V backend also supported if preferred.
+- Launch Docker Desktop once before using `docker` from PowerShell / terminal.
+
+
 
 ### 1. Create and activate a Python virtual environment
 
