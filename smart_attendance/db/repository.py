@@ -163,6 +163,20 @@ def get_student_courses(netid):
         return [row["course_id"] for row in cur.fetchall()]
 
 
+def get_instructor_courses(instructor_netid):
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT course_id, course_name AS name, enrollment_code
+            FROM courses
+            WHERE instructor_netid = %s
+            ORDER BY course_id
+            """,
+            (instructor_netid,),
+        )
+        return cur.fetchall()
+
+
 # Inserts a new course owned by instructor_netid with a pre-generated
 # enrollment_code. Returns True on insert, False if course_id already exists.
 # Enrollment_code collisions bubble up as IntegrityError (caller retries).

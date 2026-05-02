@@ -20,6 +20,7 @@ db_is_session_active = repository.is_session_active
 db_get_course_by_enrollment_code = repository.get_course_by_enrollment_code
 db_is_enrolled = repository.is_enrolled
 db_enroll_student = repository.enroll_student
+db_get_instructor_courses = repository.get_instructor_courses
 
 
 # Instructor creates a new course. Enrollment code is server-generated so the
@@ -103,9 +104,20 @@ def get_enrollment_qr():
     course = repository.get_course(course_id)
     if not course:
         return jsonify({"error": "course not found"}), 404
+    if course["instructor"] != session["netid"]:
+        return jsonify({"error": "not your course"}), 403
 
-    enrollment_code = generate_enrollment_code()
-    return jsonify({"enrollment_code": enrollment_code})
+    return jsonify({"enrollment_code": course["enrollment_code"]})
+
+
+@attendance_bp.route("/instructor/courses", methods=["GET"])
+def get_instructor_courses():
+    if "netid" not in session:
+        return jsonify({"error": "not authenticated"}), 401
+    if not session.get("is_instructor"):
+        return jsonify({"error": "access denied"}), 403
+    courses = repository.get_instructor_courses(session["netid"])
+    return jsonify({"courses": courses})
 
 
 @attendance_bp.route("/enroll/join", methods=["POST"])

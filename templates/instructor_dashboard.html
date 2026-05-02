@@ -181,10 +181,10 @@ body { background: var(--bg-secondary); }
   </nav>
 
   <div class="course-header">
-    <div class="course-title">Software Engineering — CS 3354</div>
+    <div class="course-title" id="course-title">Loading…</div>
     <div class="session-badge"><div class="dot"></div>Session live</div>
-    <select class="course-select">
-      <option>CS 3354 — Software Engineering</option>
+    <select class="course-select" id="course-select" onchange="onCourseChange()">
+      <option value="">Loading courses…</option>
     </select>
   </div>
 
@@ -295,8 +295,37 @@ body { background: var(--bg-secondary); }
     }, 3000);
   }
 
+  function onCourseChange() {
+    var sel = document.getElementById('course-select');
+    var opt = sel.options[sel.selectedIndex];
+    document.getElementById('course-title').textContent = opt.text;
+    document.getElementById('enroll-box').style.display = 'none';
+    document.getElementById('show-enroll-btn').style.display = '';
+  }
+
+  fetch('/instructor/courses')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var sel = document.getElementById('course-select');
+      sel.innerHTML = '';
+      data.courses.forEach(function(c) {
+        var opt = document.createElement('option');
+        opt.value = c.course_id;
+        opt.textContent = c.course_id + ' — ' + c.name;
+        sel.appendChild(opt);
+      });
+      if (data.courses.length > 0) {
+        document.getElementById('course-title').textContent = sel.options[0].text;
+      }
+    })
+    .catch(function() {
+      document.getElementById('course-title').textContent = 'Could not load courses';
+    });
+
   function loadEnrollQR() {
-    fetch('/enroll/qr?course_id=CS3354.001')
+    var courseId = document.getElementById('course-select').value;
+    if (!courseId) { alert('No course selected.'); return; }
+    fetch('/enroll/qr?course_id=' + encodeURIComponent(courseId))
       .then(function(r) { return r.json(); })
       .then(function(data) {
         var code = data.enrollment_code;
