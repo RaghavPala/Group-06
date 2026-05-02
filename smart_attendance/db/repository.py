@@ -163,6 +163,21 @@ def get_student_courses(netid):
         return [row["course_id"] for row in cur.fetchall()]
 
 
+def get_course_students(course_id):
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT u.netid, u.name, u.email
+            FROM enrollments e
+            JOIN users u ON u.netid = e.student_netid
+            WHERE e.course_id = %s
+            ORDER BY u.netid
+            """,
+            (course_id,),
+        )
+        return cur.fetchall()
+
+
 def get_instructor_courses(instructor_netid):
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute(

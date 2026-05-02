@@ -264,6 +264,17 @@ body { background: var(--bg-secondary); }
         </div>
       </div>
 
+      <!-- Student roster -->
+      <div class="panel">
+        <div class="panel-title" style="display:flex; justify-content:space-between; align-items:center;">
+          <span>Enrolled students</span>
+          <span id="roster-count" style="font-size:12px; color:var(--text-muted); font-weight:400;"></span>
+        </div>
+        <div class="checkin-list" id="roster-list">
+          <div class="empty-state">No students enrolled</div>
+        </div>
+      </div>
+
       <!-- Enrollment QR -->
       <div class="panel">
         <div class="panel-title">Enrollment QR</div>
@@ -332,12 +343,43 @@ body { background: var(--bg-secondary); }
     }, 3000);
   }
 
+  var rosterPollInterval = null;
+
+  function loadRoster(courseId) {
+    if (!courseId) return;
+    fetch('/course/' + encodeURIComponent(courseId) + '/students')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var list = document.getElementById('roster-list');
+        var students = data.students || [];
+        document.getElementById('roster-count').textContent = students.length + ' student' + (students.length !== 1 ? 's' : '');
+        if (students.length === 0) {
+          list.innerHTML = '<div class="empty-state">No students enrolled</div>';
+          return;
+        }
+        list.innerHTML = '';
+        students.forEach(function(s) {
+          var item = document.createElement('div');
+          item.className = 'checkin-item';
+          item.innerHTML = '<span class="checkin-netid">' + s.netid + '</span>' +
+                           '<span class="checkin-time">' + (s.name || '') + '</span>';
+          list.appendChild(item);
+        });
+      });
+  }
+
   function onCourseChange() {
     var sel = document.getElementById('course-select');
     var opt = sel.options[sel.selectedIndex];
     document.getElementById('course-title').textContent = opt.text;
     document.getElementById('enroll-box').style.display = 'none';
     document.getElementById('show-enroll-btn').style.display = '';
+    document.getElementById('roster-list').innerHTML = '<div class="empty-state">Loading…</div>';
+    document.getElementById('roster-count').textContent = '';
+    if (rosterPollInterval) clearInterval(rosterPollInterval);
+    var courseId = sel.value;
+    loadRoster(courseId);
+    rosterPollInterval = setInterval(function() { loadRoster(courseId); }, 10000);
   }
 
   fetch('/instructor/courses')
@@ -353,6 +395,8 @@ body { background: var(--bg-secondary); }
       });
       if (data.courses.length > 0) {
         document.getElementById('course-title').textContent = sel.options[0].text;
+        loadRoster(sel.value);
+        rosterPollInterval = setInterval(function() { loadRoster(sel.value); }, 10000);
       }
     })
     .catch(function() {
