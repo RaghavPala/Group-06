@@ -313,7 +313,7 @@ body { background: var(--bg-secondary); }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
-  var totalStudents = 50;
+  var totalStudents = 0;
   var presentCount  = 0;
   var sessionSeconds = 0;
   var timerInterval = null;
@@ -450,6 +450,8 @@ body { background: var(--bg-secondary); }
       .then(function(data) {
         var list = document.getElementById('roster-list');
         var students = data.students || [];
+        totalStudents = students.length;
+        updateStats();
         document.getElementById('roster-count').textContent = students.length + ' student' + (students.length !== 1 ? 's' : '');
         if (students.length === 0) {
           list.innerHTML = '<div class="empty-state">No students enrolled</div>';

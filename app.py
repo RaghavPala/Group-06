@@ -1,4 +1,4 @@
-import re, secrets
+import re
 from flask import Flask, request, redirect, url_for, render_template, session
 from flask_bcrypt import Bcrypt
 from datetime import timedelta
@@ -6,7 +6,7 @@ from views import attendance_bp, db_get_student_courses, db_get_course, db_is_se
 from smart_attendance.db import repository
 
 app = Flask(__name__)
-app.secret_key = secrets.token_hex(32) # Change this before the final version, will log everyone out each time the server restarts
+app.secret_key = "dev-secret-change-before-prod"
 app.permanent_session_lifetime = timedelta(days=7)
 
 

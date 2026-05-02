@@ -215,6 +215,10 @@ def create_course(course_id, course_name, instructor_netid, enrollment_code):
 def start_session(course_id, window_minutes, duration_minutes):
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute(
+            "UPDATE class_sessions SET is_active = FALSE WHERE course_id = %s AND is_active = TRUE",
+            (course_id,),
+        )
+        cur.execute(
             """
             INSERT INTO class_sessions
                 (course_id, class_date, start_time, end_time,
