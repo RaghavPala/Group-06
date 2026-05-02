@@ -14,6 +14,13 @@ from smart_attendance.utils.codes import generate_enrollment_code
 
 attendance_bp = Blueprint("attendance", __name__)
 
+db_get_student_courses = repository.get_student_courses
+db_get_course = repository.get_course
+db_is_session_active = repository.is_session_active
+db_get_course_by_enrollment_code = repository.get_course_by_enrollment_code
+db_is_enrolled = repository.is_enrolled
+db_enroll_student = repository.enroll_student
+
 
 # Instructor creates a new course. Enrollment code is server-generated so the
 # instructor can't pick a predictable one. Returns the code so the UI can show

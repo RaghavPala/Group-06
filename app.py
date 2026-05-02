@@ -11,6 +11,10 @@ app.permanent_session_lifetime = timedelta(days=7)
 
 app.register_blueprint(attendance_bp)
 
+@app.route('/')
+def index():
+    return redirect(url_for("login"))
+
 bcrypt = Bcrypt(app)
 
 users_db = {
@@ -128,3 +132,6 @@ def join_course_form():
 def logout():
     session.clear()
     return redirect(url_for("login"))
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", debug=True)
