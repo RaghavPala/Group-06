@@ -163,6 +163,35 @@ def get_student_courses(netid):
         return [row["course_id"] for row in cur.fetchall()]
 
 
+def get_course_students(course_id):
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT u.netid, u.name, u.email
+            FROM enrollments e
+            JOIN users u ON u.netid = e.student_netid
+            WHERE e.course_id = %s
+            ORDER BY u.netid
+            """,
+            (course_id,),
+        )
+        return cur.fetchall()
+
+
+def get_instructor_courses(instructor_netid):
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT course_id, course_name AS name, enrollment_code
+            FROM courses
+            WHERE instructor_netid = %s
+            ORDER BY course_id
+            """,
+            (instructor_netid,),
+        )
+        return cur.fetchall()
+
+
 # Inserts a new course owned by instructor_netid with a pre-generated
 # enrollment_code. Returns True on insert, False if course_id already exists.
 # Enrollment_code collisions bubble up as IntegrityError (caller retries).
@@ -186,6 +215,10 @@ def create_course(course_id, course_name, instructor_netid, enrollment_code):
 def start_session(course_id, window_minutes, duration_minutes):
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute(
+            "UPDATE class_sessions SET is_active = FALSE WHERE course_id = %s AND is_active = TRUE",
+            (course_id,),
+        )
+        cur.execute(
             """
             INSERT INTO class_sessions
                 (course_id, class_date, start_time, end_time,
@@ -203,6 +236,61 @@ def start_session(course_id, window_minutes, duration_minutes):
             (course_id, duration_minutes, window_minutes),
         )
         return cur.fetchone()["session_id"]
+
+
+def end_session(course_id):
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE class_sessions
+            SET is_active = FALSE
+            WHERE course_id = %s AND is_active = TRUE
+            RETURNING session_id
+            """,
+            (course_id,),
+        )
+        return cur.fetchone() is not None
+
+
+def get_session_status(course_id):
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT session_id,
+                   is_active,
+                   GREATEST(0, EXTRACT(EPOCH FROM (attendance_window_end - CURRENT_TIMESTAMP)))::int AS seconds_remaining
+            FROM class_sessions
+            WHERE course_id = %s
+              AND is_active = TRUE
+              AND attendance_window_end > CURRENT_TIMESTAMP
+            ORDER BY start_time DESC
+            LIMIT 1
+            """,
+            (course_id,),
+        )
+        row = cur.fetchone()
+        if row:
+            return {"active": True, "seconds_remaining": row["seconds_remaining"], "session_id": row["session_id"]}
+        return {"active": False, "seconds_remaining": 0}
+
+
+# All students marked present in today's active session for a course.
+def get_session_present(course_id):
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT u.netid, u.name, ar.scanned_at
+            FROM attendance_records ar
+            JOIN class_sessions cs ON cs.session_id = ar.session_id
+            JOIN users u ON u.netid = ar.student_netid
+            WHERE cs.course_id = %s
+              AND cs.is_active = TRUE
+              AND cs.class_date = CURRENT_DATE
+            ORDER BY ar.scanned_at
+            """,
+            (course_id,),
+        )
+        return cur.fetchall()
 
 
 # Feeds the CSV export. One row per (student, session they attended).

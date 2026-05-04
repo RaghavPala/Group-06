@@ -44,7 +44,7 @@ body { background: var(--bg-secondary); }
 .course-header {
   display: flex; align-items: center; gap: 14px; margin-bottom: 24px; flex-wrap: wrap;
 }
-.course-title { font-size: 20px; font-weight: 500; }
+.course-title { font-size: 20px; font-weight: 500; min-width: 280px; }
 
 .session-badge {
   display: inline-flex; align-items: center; gap: 6px;
@@ -160,6 +160,28 @@ body { background: var(--bg-secondary); }
   font-size: 22px; font-weight: 500;
   letter-spacing: 0.12em; color: var(--orange);
 }
+
+/* Create course modal */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.4); z-index: 100;
+  align-items: center; justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--bg); border-radius: var(--radius-md);
+  padding: 28px 32px; width: 380px; max-width: 90vw;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.modal-title { font-size: 16px; font-weight: 500; }
+.modal input {
+  width: 100%; padding: 9px 12px; font-size: 13px;
+  border: 0.5px solid var(--border); border-radius: var(--radius-sm);
+  outline: none; box-sizing: border-box;
+}
+.modal input:focus { border-color: var(--orange); }
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+.modal-error { font-size: 12px; color: #c0392b; min-height: 16px; }
 {% endblock %}
 
 {% block body %}
@@ -181,11 +203,26 @@ body { background: var(--bg-secondary); }
   </nav>
 
   <div class="course-header">
-    <div class="course-title">Software Engineering — CS 3354</div>
+    <div class="course-title" id="course-title">Loading…</div>
     <div class="session-badge"><div class="dot"></div>Session live</div>
-    <select class="course-select">
-      <option>CS 3354 — Software Engineering</option>
+    <select class="course-select" id="course-select" onchange="onCourseChange()">
+      <option value="">Loading courses…</option>
     </select>
+    <button class="btn btn-outline" onclick="openCreateCourse()" style="font-size:13px; padding:7px 14px;">+ New course</button>
+  </div>
+
+  <!-- Create course modal -->
+  <div class="modal-overlay" id="create-course-modal">
+    <div class="modal">
+      <div class="modal-title">Create new course</div>
+      <input type="text" id="new-course-id" placeholder="Course ID (e.g. CS1234.001)" />
+      <input type="text" id="new-course-name" placeholder="Course name" />
+      <div class="modal-error" id="create-course-error"></div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeCreateCourse()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitCreateCourse()">Create</button>
+      </div>
+    </div>
   </div>
 
   <div class="stats-grid">
@@ -198,8 +235,12 @@ body { background: var(--bg-secondary); }
       <div class="stat-lbl">Attendance rate</div>
     </div>
     <div class="stat-card">
-      <div class="stat-num" id="timer-display">10:00</div>
+      <div class="stat-num" id="timer-display">—:——</div>
       <div class="stat-lbl">Time remaining</div>
+      <div style="margin-top:10px; display:flex; gap:8px; justify-content:center;">
+        <button class="btn btn-primary" id="start-session-btn" onclick="startSession()" style="font-size:12px; padding:5px 12px; width:auto;">Start</button>
+        <button class="btn btn-outline" id="end-session-btn" onclick="endSession()" style="font-size:12px; padding:5px 12px; width:auto; display:none;">End</button>
+      </div>
     </div>
   </div>
 
@@ -208,10 +249,18 @@ body { background: var(--bg-secondary); }
     <!-- Webcam scan panel -->
     <div class="panel">
       <div class="panel-title">Webcam scanner</div>
-      <div class="scan-area" id="scan-area">
-        <div class="cam-icon">📷</div>
-        <div class="cam-label">Webcam scanner active</div>
-        <div class="cam-sub">Point at a student's QR code to mark them present</div>
+      <div class="scan-area" id="scan-area" style="position:relative; overflow:hidden; padding:0;">
+        <video id="scanner-video" autoplay playsinline style="width:100%; height:100%; object-fit:cover; display:none; border-radius:var(--radius-md);"></video>
+        <canvas id="scanner-canvas" style="display:none;"></canvas>
+        <div id="scan-placeholder" style="display:flex; flex-direction:column; align-items:center; gap:10px;">
+          <div class="cam-icon">📷</div>
+          <div class="cam-label">Camera not active</div>
+          <div class="cam-sub">Click Start Camera to begin scanning</div>
+        </div>
+      </div>
+      <div style="display:flex; gap:8px; margin: 12px 0;">
+        <button class="btn btn-primary" id="start-cam-btn" onclick="startCamera()" style="flex:1; font-size:13px;">Start Camera</button>
+        <button class="btn btn-outline" id="stop-cam-btn" onclick="stopCamera()" style="flex:1; font-size:13px; display:none;">Stop Camera</button>
       </div>
       <div class="scan-status" id="scan-status">Waiting for QR code…</div>
     </div>
@@ -219,11 +268,25 @@ body { background: var(--bg-secondary); }
     <!-- Right column -->
     <div style="display:flex; flex-direction:column; gap:20px;">
 
-      <!-- Recent check-ins -->
+      <!-- Present list -->
       <div class="panel">
-        <div class="panel-title">Recent check-ins</div>
+        <div class="panel-title" style="display:flex; justify-content:space-between; align-items:center;">
+          <span>Present</span>
+          <span id="present-list-count" style="font-size:12px; color:var(--text-muted); font-weight:400;"></span>
+        </div>
         <div class="checkin-list" id="checkin-list">
           <div class="empty-state">No check-ins yet</div>
+        </div>
+      </div>
+
+      <!-- Student roster -->
+      <div class="panel">
+        <div class="panel-title" style="display:flex; justify-content:space-between; align-items:center;">
+          <span>Enrolled students</span>
+          <span id="roster-count" style="font-size:12px; color:var(--text-muted); font-weight:400;"></span>
+        </div>
+        <div class="checkin-list" id="roster-list">
+          <div class="empty-state">No students enrolled</div>
         </div>
       </div>
 
@@ -248,10 +311,12 @@ body { background: var(--bg-secondary); }
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
-  var totalStudents = 50;
+  var totalStudents = 0;
   var presentCount  = 0;
-  var sessionSeconds = 10 * 60;
+  var sessionSeconds = 0;
+  var timerInterval = null;
 
   function pad(n) { return String(n).padStart(2, '0'); }
 
@@ -261,42 +326,323 @@ body { background: var(--bg-secondary); }
     document.getElementById('pct').textContent = pct + '%';
   }
 
-  function tickTimer() {
-    if (sessionSeconds > 0) sessionSeconds--;
+  function setSessionActive(secondsRemaining) {
+    sessionSeconds = secondsRemaining;
+    document.getElementById('start-session-btn').style.display = 'none';
+    document.getElementById('end-session-btn').style.display = '';
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(function() {
+      if (sessionSeconds > 0) {
+        sessionSeconds--;
+        var m = Math.floor(sessionSeconds / 60);
+        var s = sessionSeconds % 60;
+        document.getElementById('timer-display').textContent = pad(m) + ':' + pad(s);
+      } else {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        document.getElementById('timer-display').textContent = '0:00';
+        var courseId = document.getElementById('course-select').value;
+        fetch('/session/end', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({course_id: courseId})
+        }).then(function() { setSessionInactive(); });
+      }
+    }, 1000);
     var m = Math.floor(sessionSeconds / 60);
     var s = sessionSeconds % 60;
     document.getElementById('timer-display').textContent = pad(m) + ':' + pad(s);
   }
 
-  setInterval(tickTimer, 1000);
+  function setSessionInactive() {
+    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+    document.getElementById('timer-display').textContent = '—:——';
+    document.getElementById('start-session-btn').style.display = '';
+    document.getElementById('end-session-btn').style.display = 'none';
+  }
+
+  function startSession() {
+    var courseId = document.getElementById('course-select').value;
+    if (!courseId) { alert('Select a course first.'); return; }
+    fetch('/session/start', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({course_id: courseId, window_minutes: 15, duration_minutes: 75})
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.window_minutes) {
+        setSessionActive(data.window_minutes * 60);
+      } else {
+        alert(data.error || 'Could not start session.');
+      }
+    });
+  }
+
+  function endSession() {
+    var courseId = document.getElementById('course-select').value;
+    fetch('/session/end', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({course_id: courseId})
+    })
+    .then(function(r) { return r.json(); })
+    .then(function() { setSessionInactive(); });
+  }
+
+  function syncSessionStatus(courseId) {
+    fetch('/session/status/' + encodeURIComponent(courseId))
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.active && data.seconds_remaining > 0) {
+          setSessionActive(data.seconds_remaining);
+        } else {
+          setSessionInactive();
+        }
+      });
+  }
+
   updateStats();
 
+  function loadPresent(courseId) {
+    if (!courseId) return;
+    fetch('/session/present/' + encodeURIComponent(courseId))
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var list = document.getElementById('checkin-list');
+        var students = data.present || [];
+        presentCount = students.length;
+        updateStats();
+        document.getElementById('present-list-count').textContent = students.length || '';
+        if (students.length === 0) {
+          list.innerHTML = '<div class="empty-state">No check-ins yet</div>';
+          return;
+        }
+        list.innerHTML = '';
+        students.forEach(function(s) {
+          var item = document.createElement('div');
+          item.className = 'checkin-item';
+          item.innerHTML = '<span class="checkin-netid">' + s.netid + '</span>' +
+                           '<span class="checkin-time">' + (s.name || '') + '</span>' +
+                           '<span class="checkin-tag">Present</span>';
+          list.appendChild(item);
+        });
+      });
+  }
+
   function addCheckin(netid) {
-    presentCount++;
-    updateStats();
-    var list = document.getElementById('checkin-list');
-    var empty = list.querySelector('.empty-state');
-    if (empty) empty.remove();
-
-    var now = new Date();
-    var time = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
-    var item = document.createElement('div');
-    item.className = 'checkin-item';
-    item.innerHTML = '<span class="checkin-netid">' + netid + '</span>' +
-                     '<span class="checkin-time">' + time + '</span>' +
-                     '<span class="checkin-tag">Present</span>';
-    list.prepend(item);
-
+    var courseId = document.getElementById('course-select').value;
+    loadPresent(courseId);
     document.getElementById('scan-status').textContent = '✓ Marked present: ' + netid;
     document.getElementById('scan-status').style.color = 'var(--green)';
     setTimeout(function() {
-      document.getElementById('scan-status').textContent = 'Waiting for QR code…';
+      document.getElementById('scan-status').textContent = 'Scanning…';
       document.getElementById('scan-status').style.color = '';
     }, 3000);
   }
 
+  var rosterPollInterval = null;
+
+  function loadRoster(courseId) {
+    if (!courseId) return;
+    fetch('/course/' + encodeURIComponent(courseId) + '/students')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var list = document.getElementById('roster-list');
+        var students = data.students || [];
+        totalStudents = students.length;
+        updateStats();
+        document.getElementById('roster-count').textContent = students.length + ' student' + (students.length !== 1 ? 's' : '');
+        if (students.length === 0) {
+          list.innerHTML = '<div class="empty-state">No students enrolled</div>';
+          return;
+        }
+        list.innerHTML = '';
+        students.forEach(function(s) {
+          var item = document.createElement('div');
+          item.className = 'checkin-item';
+          item.innerHTML = '<span class="checkin-netid">' + s.netid + '</span>' +
+                           '<span class="checkin-time">' + (s.name || '') + '</span>';
+          list.appendChild(item);
+        });
+      });
+  }
+
+  function onCourseChange() {
+    var sel = document.getElementById('course-select');
+    var opt = sel.options[sel.selectedIndex];
+    document.getElementById('course-title').textContent = opt.text;
+    document.getElementById('enroll-box').style.display = 'none';
+    document.getElementById('show-enroll-btn').style.display = '';
+    document.getElementById('roster-list').innerHTML = '<div class="empty-state">Loading…</div>';
+    document.getElementById('roster-count').textContent = '';
+    if (rosterPollInterval) clearInterval(rosterPollInterval);
+    var courseId = sel.value;
+    loadRoster(courseId);
+    rosterPollInterval = setInterval(function() { loadRoster(courseId); }, 10000);
+    syncSessionStatus(courseId);
+    loadPresent(courseId);
+  }
+
+  fetch('/instructor/courses')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var sel = document.getElementById('course-select');
+      sel.innerHTML = '';
+      data.courses.forEach(function(c) {
+        var opt = document.createElement('option');
+        opt.value = c.course_id;
+        opt.textContent = c.course_id + ' — ' + c.name;
+        sel.appendChild(opt);
+      });
+      if (data.courses.length > 0) {
+        document.getElementById('course-title').textContent = sel.options[0].text;
+        var firstCourse = sel.value;
+        loadRoster(firstCourse);
+        rosterPollInterval = setInterval(function() { loadRoster(firstCourse); }, 10000);
+        syncSessionStatus(firstCourse);
+        loadPresent(firstCourse);
+      }
+    })
+    .catch(function() {
+      document.getElementById('course-title').textContent = 'Could not load courses';
+    });
+
+  function openCreateCourse() {
+    document.getElementById('new-course-id').value = '';
+    document.getElementById('new-course-name').value = '';
+    document.getElementById('create-course-error').textContent = '';
+    document.getElementById('create-course-modal').classList.add('open');
+  }
+
+  function closeCreateCourse() {
+    document.getElementById('create-course-modal').classList.remove('open');
+  }
+
+  function submitCreateCourse() {
+    var courseId = document.getElementById('new-course-id').value.trim();
+    var courseName = document.getElementById('new-course-name').value.trim();
+    var errEl = document.getElementById('create-course-error');
+    if (!courseId || !courseName) { errEl.textContent = 'Both fields are required.'; return; }
+
+    fetch('/course', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({course_id: courseId, course_name: courseName})
+    })
+    .then(function(r) { return r.json().then(function(d) { return {status: r.status, data: d}; }); })
+    .then(function(res) {
+      if (res.status === 201) {
+        closeCreateCourse();
+        var sel = document.getElementById('course-select');
+        var opt = document.createElement('option');
+        opt.value = res.data.course_id;
+        opt.textContent = res.data.course_id + ' — ' + res.data.course_name;
+        sel.appendChild(opt);
+        sel.value = res.data.course_id;
+        onCourseChange();
+      } else {
+        errEl.textContent = res.data.error || 'Failed to create course.';
+      }
+    })
+    .catch(function() { errEl.textContent = 'Network error. Try again.'; });
+  }
+
+  var scanStream = null;
+  var scanAnimFrame = null;
+  var scanCooldown = false;
+
+  function startCamera() {
+    var courseId = document.getElementById('course-select').value;
+    if (!courseId) { alert('Select a course first.'); return; }
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } })
+      .then(function(stream) {
+        scanStream = stream;
+        var video = document.getElementById('scanner-video');
+        video.srcObject = stream;
+        video.style.display = 'block';
+        document.getElementById('scan-placeholder').style.display = 'none';
+        document.getElementById('start-cam-btn').style.display = 'none';
+        document.getElementById('stop-cam-btn').style.display = '';
+        document.getElementById('scan-status').textContent = 'Scanning…';
+        document.getElementById('scan-status').style.color = '';
+        scanLoop();
+      })
+      .catch(function(err) {
+        alert('Camera access denied: ' + err.message);
+      });
+  }
+
+  function stopCamera() {
+    if (scanAnimFrame) { cancelAnimationFrame(scanAnimFrame); scanAnimFrame = null; }
+    if (scanStream) { scanStream.getTracks().forEach(function(t) { t.stop(); }); scanStream = null; }
+    var video = document.getElementById('scanner-video');
+    video.srcObject = null;
+    video.style.display = 'none';
+    document.getElementById('scan-placeholder').style.display = 'flex';
+    document.getElementById('start-cam-btn').style.display = '';
+    document.getElementById('stop-cam-btn').style.display = 'none';
+    document.getElementById('scan-status').textContent = 'Waiting for QR code…';
+    document.getElementById('scan-status').style.color = '';
+    scanCooldown = false;
+  }
+
+  function scanLoop() {
+    if (!scanStream) return;
+    if (typeof jsQR === 'undefined') {
+      document.getElementById('scan-status').textContent = '✗ jsQR library failed to load — check network';
+      return;
+    }
+    var video = document.getElementById('scanner-video');
+    var canvas = document.getElementById('scanner-canvas');
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      var code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'attemptBoth' });
+      if (code && !scanCooldown) {
+        console.log('QR decoded:', code.data);
+        submitScan(code.data);
+      }
+    }
+    scanAnimFrame = requestAnimationFrame(scanLoop);
+  }
+
+  function submitScan(token) {
+    scanCooldown = true;
+    fetch('/attendance/scan', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({token: token})
+    })
+    .then(function(r) { return r.json().then(function(d) { return {status: r.status, data: d}; }); })
+    .then(function(res) {
+      var statusEl = document.getElementById('scan-status');
+      if (res.status === 200) {
+        addCheckin(res.data.netid);
+        setTimeout(function() { scanCooldown = false; }, 3000);
+      } else {
+        statusEl.textContent = '✗ ' + (res.data.error || 'Scan failed');
+        statusEl.style.color = '#c0392b';
+        setTimeout(function() {
+          statusEl.textContent = 'Scanning…';
+          statusEl.style.color = '';
+          scanCooldown = false;
+        }, 2000);
+      }
+    })
+    .catch(function() {
+      document.getElementById('scan-status').textContent = 'Network error';
+      setTimeout(function() { scanCooldown = false; }, 2000);
+    });
+  }
+
   function loadEnrollQR() {
-    fetch('/enroll/qr?course_id=CS3354.001')
+    var courseId = document.getElementById('course-select').value;
+    if (!courseId) { alert('No course selected.'); return; }
+    fetch('/enroll/qr?course_id=' + encodeURIComponent(courseId))
       .then(function(r) { return r.json(); })
       .then(function(data) {
         var code = data.enrollment_code;

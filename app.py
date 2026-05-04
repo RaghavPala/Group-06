@@ -1,11 +1,12 @@
-import re, secrets
+import re
 from flask import Flask, request, redirect, url_for, render_template, session
 from flask_bcrypt import Bcrypt
 from datetime import timedelta
 from views import attendance_bp, db_get_student_courses, db_get_course, db_is_session_active, generate_token, get_current_epoch, get_window_seconds_remaining
+from smart_attendance.db import repository
 
 app = Flask(__name__)
-app.secret_key = secrets.token_hex(32) # Change this before the final version, will log everyone out each time the server restarts
+app.secret_key = "dev-secret-change-before-prod"
 app.permanent_session_lifetime = timedelta(days=7)
 
 
@@ -17,16 +18,6 @@ def index():
 
 bcrypt = Bcrypt(app)
 
-users_db = {
-    "dal123456": {
-        "password": bcrypt.generate_password_hash("password1234*").decode('utf-8'),
-        "is_instructor": False
-    },
-    "proftest": {
-        "password": bcrypt.generate_password_hash("profpass1*").decode('utf-8'),
-        "is_instructor": True
-    }
-}
 
 # check if valid netid
 # very old netids can be only characters (will likely only be applicable for professors who have been here a while)
@@ -48,18 +39,15 @@ def login():
         netid = request.form['netid'].strip()
         password = request.form['password'].strip()
 
-        # validate netid is correct format
         if not valid_netid(netid):
-            return "Invalid NetID format. Please ensure your NetID is all lowercase."
+            return render_template("login.html", error="Invalid NetID format. Please ensure your NetID is all lowercase.")
 
-        # validate user exists
-        if netid not in users_db:
-            return "User not found. Please try again."
+        # look up user in DB and verify bcrypt hash
+        user = repository.get_user_by_netid(netid)
+        if not user:
+            return render_template("login.html", error="User not found. Please try again.")
 
-        # check password
-        user = users_db[netid]
-        hashed_password = user["password"]
-        if bcrypt.check_password_hash(hashed_password, password):
+        if bcrypt.check_password_hash(user["password_hash"], password):
             session.permanent = True
             session["netid"] = netid
             session["is_instructor"] = user["is_instructor"]

@@ -20,6 +20,10 @@ db_is_session_active = repository.is_session_active
 db_get_course_by_enrollment_code = repository.get_course_by_enrollment_code
 db_is_enrolled = repository.is_enrolled
 db_enroll_student = repository.enroll_student
+db_get_instructor_courses = repository.get_instructor_courses
+db_get_course_students = repository.get_course_students
+db_end_session = repository.end_session
+db_get_session_status = repository.get_session_status
 
 
 # Instructor creates a new course. Enrollment code is server-generated so the
@@ -91,6 +95,59 @@ def start_session():
     ), 201
 
 
+@attendance_bp.route("/session/end", methods=["POST"])
+def end_session():
+    if "netid" not in session:
+        return jsonify({"error": "not authenticated"}), 401
+    if not session.get("is_instructor"):
+        return jsonify({"error": "access denied"}), 403
+    body = request.get_json() or {}
+    course_id = body.get("course_id")
+    if not course_id:
+        return jsonify({"error": "missing course_id"}), 400
+    course = repository.get_course(course_id)
+    if not course:
+        return jsonify({"error": "course not found"}), 404
+    if course["instructor"] != session["netid"]:
+        return jsonify({"error": "not your course"}), 403
+    ended = repository.end_session(course_id)
+    if not ended:
+        return jsonify({"error": "no active session"}), 404
+    return jsonify({"message": "session ended", "course_id": course_id})
+
+
+@attendance_bp.route("/session/status/<course_id>", methods=["GET"])
+def get_session_status(course_id):
+    if "netid" not in session:
+        return jsonify({"error": "not authenticated"}), 401
+    if not session.get("is_instructor"):
+        return jsonify({"error": "access denied"}), 403
+    course = repository.get_course(course_id)
+    if not course:
+        return jsonify({"error": "course not found"}), 404
+    if course["instructor"] != session["netid"]:
+        return jsonify({"error": "not your course"}), 403
+    status = repository.get_session_status(course_id)
+    return jsonify(status)
+
+
+# Returns students who have been marked present in today's active session.
+# Used by the instructor dashboard to populate the Present panel on load and after each scan.
+@attendance_bp.route("/session/present/<course_id>", methods=["GET"])
+def get_session_present(course_id):
+    if "netid" not in session:
+        return jsonify({"error": "not authenticated"}), 401
+    if not session.get("is_instructor"):
+        return jsonify({"error": "access denied"}), 403
+    course = repository.get_course(course_id)
+    if not course:
+        return jsonify({"error": "course not found"}), 404
+    if course["instructor"] != session["netid"]:
+        return jsonify({"error": "not your course"}), 403
+    present = repository.get_session_present(course_id)
+    return jsonify({"present": present})
+
+
 @attendance_bp.route("/enroll/qr", methods=["GET"])
 def get_enrollment_qr():
     if "netid" not in session:
@@ -103,9 +160,35 @@ def get_enrollment_qr():
     course = repository.get_course(course_id)
     if not course:
         return jsonify({"error": "course not found"}), 404
+    if course["instructor"] != session["netid"]:
+        return jsonify({"error": "not your course"}), 403
 
-    enrollment_code = generate_enrollment_code()
-    return jsonify({"enrollment_code": enrollment_code})
+    return jsonify({"enrollment_code": course["enrollment_code"]})
+
+
+@attendance_bp.route("/course/<course_id>/students", methods=["GET"])
+def get_course_students(course_id):
+    if "netid" not in session:
+        return jsonify({"error": "not authenticated"}), 401
+    if not session.get("is_instructor"):
+        return jsonify({"error": "access denied"}), 403
+    course = repository.get_course(course_id)
+    if not course:
+        return jsonify({"error": "course not found"}), 404
+    if course["instructor"] != session["netid"]:
+        return jsonify({"error": "not your course"}), 403
+    students = repository.get_course_students(course_id)
+    return jsonify({"students": students})
+
+
+@attendance_bp.route("/instructor/courses", methods=["GET"])
+def get_instructor_courses():
+    if "netid" not in session:
+        return jsonify({"error": "not authenticated"}), 401
+    if not session.get("is_instructor"):
+        return jsonify({"error": "access denied"}), 403
+    courses = repository.get_instructor_courses(session["netid"])
+    return jsonify({"courses": courses})
 
 
 @attendance_bp.route("/enroll/join", methods=["POST"])
